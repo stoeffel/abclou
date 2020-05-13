@@ -1,24 +1,43 @@
-module Letter (Slot, Message(..), component) where
+module Letter 
+  ( Slot
+  , Message(..)
+  , Letter
+  , random
+  , component
+  ) where
 
 import Prelude
 
+import Effect (Effect)
+import Effect.Random.Extra (randomElement)
+
 import Data.Maybe (Maybe(..))
+import Data.Array.NonEmpty as AN
+import Data.Array.NonEmpty ((!!), NonEmptyArray)
+import Data.Maybe (fromMaybe, Maybe(..))
+
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
+
 type Slot p = forall q. H.Slot q Message p
 
-type Input = String
+data Letter = Letter String
+
+derive instance letterEq :: Eq Letter
+derive instance letterOrd :: Ord Letter
+
+type Input = Letter
 
 data Message = Selected
 
 data Action 
   = Select
-  | HandleInput String
+  | HandleInput Letter
 
-type State = { selected :: Boolean, letter :: String }
+type State = { selected :: Boolean, letter :: Letter }
 
 component :: forall q m. H.Component HH.HTML q Input Message m
 component =
@@ -36,7 +55,7 @@ initialState letter = { selected: false, letter }
 
 render :: forall m. State -> H.ComponentHTML Action () m
 render state =
-  let label = state.letter in
+  let (Letter label) = state.letter in
     HH.button
       [ HP.title label
       , HE.onClick \_ -> Just Select
@@ -50,3 +69,15 @@ handleAction = case _ of
     state <- H.get
     when (state.letter /= newLetter) $ H.put state { letter = newLetter }
  
+random :: Effect Letter
+random = 
+  randomElement
+    $ Letter
+    <$> AN.cons' "a"
+    [ "b", "c", "d", "e"
+    , "f", "g", "h", "i"
+    , "j", "k", "l", "m"
+    , "n", "o", "p", "q"
+    , "r", "s", "t", "u"
+    , "v", "w", "x", "y"
+    , "z" ]

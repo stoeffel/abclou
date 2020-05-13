@@ -6,10 +6,12 @@ You can edit this file as you like.
 , dependencies =
   [ "console"
   , "effect"
+  , "foldable-traversable"
   , "halogen"
   , "halogen-vdom"
   , "profunctor-lenses"
   , "psci-support"
+  , "random"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
