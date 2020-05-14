@@ -1,3 +1,5 @@
+var assets = require('./assets/*.png');
+var css = require('./src/*.css');
 var Main = require('./output/Main');
 
 function main () {
@@ -17,6 +19,8 @@ function main () {
     You will probably want to make it a function from String -> Effect ()
   */
 
+  console.log("starting")
+  window.assets = assets;
   Main.main();
 }
 

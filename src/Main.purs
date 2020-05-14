@@ -23,12 +23,14 @@ import Halogen.VDom.Driver (runUI)
 
 import CSS as CSS
 import CSS.Common as CSS
+import CSS.Flexbox as CSS.FB
 
 import Effect (Effect)
 import Effect.Aff (Aff, delay)
 import Effect.Console (log)
 import Effect.Random (randomInt)
 import Effect.Random.Extra (randomElement, randomUniqElements)
+
 
 
 main :: Effect Unit
@@ -89,20 +91,40 @@ container =
       CSS.display CSS.flex 
       CSS.alignItems CSS.center 
       CSS.flexDirection CSS.column
-      CSS.maxHeight $ CSS.pct 100.0
+      CSS.height $ CSS.pct 100.0
   ]
-  <<< A.cons (HH.h1_ [ HH.text "AbcLou" ])
+  <<< A.cons (
+    HH.h1 
+    [ HC.style $ do
+        CSS.color color3
+        CSS.fontSize $ CSS.em 4.0
+        CSS.marginBottom CSS.nil
+    ]
+    [ HH.text "ABC LOU" ]
+  )
+
+color3 = CSS.rgba 131 73 99 1.0
+color4 = CSS.rgba 112 77 78 1.0
 
 viewQuiz :: forall m. Quiz -> View m
 viewQuiz quiz =
-  HH.div_
+  HH.div 
+  [ HC.style $ do
+      CSS.display CSS.flex 
+      CSS.alignItems CSS.stretch 
+      CSS.justifyContent CSS.spaceBetween 
+      CSS.flexDirection CSS.column
+      CSS.FB.flex 2 0 CSS.nil
+  ]
     [ viewDescription quiz.correct
     , HH.ul
         [ HC.style $ do
+            CSS.margin ( CSS.em 1.2 ) CSS.nil CSS.nil CSS.nil
             CSS.display CSS.flex 
             CSS.justifyContent CSS.spaceBetween
+            CSS.alignItems CSS.stretch
             CSS.padding CSS.nil CSS.nil CSS.nil CSS.nil
-            CSS.height $ CSS.px 80.0
+            CSS.FB.flex 2 0 CSS.nil
         ]
         $ AN.toArray $ mapWithIndex viewLetter quiz.letters
     ]
@@ -120,6 +142,7 @@ handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
 handleAction = case _ of
   Initialize -> do
     quiz <- H.liftEffect randomQuiz
+    _ <- H.liftEffect (log "HELLO")
     H.modify_ \_ -> Started quiz
     H.raise Initialized
   LetterMessage msg -> handleLetterMessage msg
@@ -136,9 +159,7 @@ nextGame :: Game -> Aff Game
 nextGame (Correct _) = do
   intermission
   Started <$> H.liftEffect randomQuiz
-nextGame game@(TryAgain _ next) = do
-  intermission
-  pure $ Started next
+nextGame game@(TryAgain _ next) = pure $ Started next
 nextGame game = pure game
 
 maybeNewGame :: L.Letter -> Game -> Game
@@ -149,7 +170,8 @@ maybeNewGame _ game = game
   
 disable :: L.Letter -> L.State -> L.State
 disable l st
-  | st.letter == l = L.disable st
+  | st.letter == l = L.wrong st
+  | L.isWrong st = L.disable st
   | otherwise = st
 
 intermission :: Aff Unit

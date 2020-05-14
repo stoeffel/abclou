@@ -5,6 +5,8 @@ module Letter
   , Input
   , IsEnabled(..)
   , disable
+  , wrong
+  , isWrong
   , state
   , State
   , letters
@@ -15,6 +17,9 @@ module Letter
 
 import Prelude
 
+import Assets as Assets
+
+import Data.Unit
 import Effect (Effect)
 import Effect.Random.Extra (randomElement)
 
@@ -23,6 +28,8 @@ import Data.Array.NonEmpty as AN
 import Data.Array.NonEmpty ((!!), NonEmptyArray)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (toUpper)
+import Data.Tuple (Tuple(..))
+import Data.NonEmpty ((:|))
 
 import Halogen as H
 import Halogen.HTML as HH
@@ -45,9 +52,14 @@ type Input =
   , isEnabled :: IsEnabled
   }
 
-data IsEnabled = Enabled | Disabled
+data IsEnabled = Enabled | Wrong | Disabled
 
 derive instance isEnabledEq :: Eq IsEnabled
+
+instance isEnabledShow :: Show IsEnabled where
+  show Enabled = "enabled"
+  show Disabled = "disabled"
+  show Wrong = "wrong"
 
 data Message = Selected Letter
 
@@ -69,6 +81,12 @@ state letter = { letter, isEnabled: Enabled, selected: false }
 
 disable :: State -> State
 disable state = state { isEnabled = Disabled }
+
+wrong :: State -> State
+wrong state = state { isEnabled = Wrong }
+
+isWrong :: State -> Boolean
+isWrong state = state.isEnabled == Wrong
 
 letter :: forall q m. H.Component HH.HTML q Input Message m
 letter =
@@ -106,12 +124,15 @@ renderDescription (Letter _ desc imgSrc) =
     [ HH.h3_ [HH.text desc]
     , HH.img
         [ HP.alt desc
-        , HP.src imgSrc
+        , HP.src ( Assets.for imgSrc )
         , HC.style $ do
-            CSS.maxWidth $ CSS.pct 80.0
-            CSS.maxHeight $ CSS.pct 80.0
+            CSS.width $ CSS.px 400.0
+            CSS.height $ CSS.px 400.0
         ]
     ]
+
+color1 = CSS.rgba 223 124 168 0.94
+color2 = CSS.rgba 162 90 122 0.94
 
 renderLetter :: forall m. State -> H.ComponentHTML Action () m
 renderLetter state =
@@ -119,12 +140,26 @@ renderLetter state =
     HH.button
       [ HP.title (toUpper label)
       , HP.enabled (state.isEnabled == Enabled)
+      , HP.id_ label
+      , HP.classes 
+        [ HH.ClassName "letter"
+        , HH.ClassName $ show state.isEnabled 
+        ]
       , HC.style $ do
+         CSS.fontSize $ CSS.em 6.0
          CSS.width $ CSS.pct 80.0
          CSS.height $ CSS.pct 80.0
+         CSS.maxWidth $ CSS.px 150.0
+         CSS.maxHeight $ CSS.px 150.0
+         CSS.borderRadius (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) 
+         CSS.margin (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0)
+         case state.isEnabled of
+           Enabled -> CSS.backgroundColor color1
+           Disabled -> CSS.backgroundColor color2
+           Wrong -> CSS.backgroundColor color2
       , HE.onClick \_ -> Just Select
       ]
-      [ HH.text (toUpper label ) ]
+      [ HH.text (toUpper label) ]
 
 handleAction :: forall m. Action -> H.HalogenM State Action () Message m Unit
 handleAction = case _ of
@@ -142,7 +177,7 @@ handleActionDesc = case _ of
     st <- H.get
     when (st /= letter) $ H.put letter
  
-a = Letter "a" "Aff" "https://via.placeholder.com/700"
+a = Letter "a" "Aff" ("aff")
 
 fallback :: NonEmptyArray Letter
 fallback = AN.singleton a
@@ -150,29 +185,29 @@ fallback = AN.singleton a
 letters :: NonEmptyArray Letter
 letters = 
    AN.cons' a $
-    [ Letter "b" "Bär" "https://via.placeholder.com/700"
-    , Letter "c" "Clown" "https://via.placeholder.com/700"
-    , Letter "d" "Dame" "https://via.placeholder.com/700"
-    , Letter "e" "Elch" "https://via.placeholder.com/700"
-    , Letter "f" "Fuchs" "https://via.placeholder.com/700"
-    , Letter "g" "Giraffe" "https://via.placeholder.com/700"
-    , Letter "h" "Hund" "https://via.placeholder.com/700"
-    , Letter "i" "Igel" "https://via.placeholder.com/700"
-    , Letter "j" "Jäger" "https://via.placeholder.com/700"
-    , Letter "k" "Karate" "https://via.placeholder.com/700"
-    , Letter "l" "Lache" "https://via.placeholder.com/700"
-    , Letter "m" "Mama" "https://via.placeholder.com/700"
-    , Letter "n" "Nase" "https://via.placeholder.com/700"
-    , Letter "o" "Ohr" "https://via.placeholder.com/700"
-    , Letter "p" "Papa" "https://via.placeholder.com/700"
-    , Letter "q" "Quack" "https://via.placeholder.com/700"
-    , Letter "r" "Raggete" "https://via.placeholder.com/700"
-    , Letter "s" "Stern" "https://via.placeholder.com/700"
-    , Letter "t" "Tanze" "https://via.placeholder.com/700"
-    , Letter "u" "Uhu" "https://via.placeholder.com/700"
-    , Letter "v" "Velo" "https://via.placeholder.com/700"
-    , Letter "w" "Winter" "https://via.placeholder.com/700"
-    , Letter "x" "Xylophone" "https://via.placeholder.com/700"
-    , Letter "y" "Yak" "https://via.placeholder.com/700"
-    , Letter "z" "Zug" "https://via.placeholder.com/700"
+    [ Letter "b" "Bär" ("aff")
+    , Letter "c" "Clown" ("aff")
+    , Letter "d" "Dame" ( "aff")
+    , Letter "e" "Elch" ( "aff")
+    , Letter "f" "Fuchs" ( "aff")
+    , Letter "g" "Giraffe" ( "aff")
+    , Letter "h" "Hund" ( "aff")
+    , Letter "i" "Igel" ( "aff")
+    , Letter "j" "Jäger" ( "aff")
+    , Letter "k" "Karate" ( "aff")
+    , Letter "l" "Lache" ( "aff")
+    , Letter "m" "Mama" ( "aff")
+    , Letter "n" "Nase" ( "aff")
+    , Letter "o" "Ohr" ( "aff")
+    , Letter "p" "Papa" ( "aff")
+    , Letter "q" "Quack" ( "aff")
+    , Letter "r" "Raggete" ( "aff")
+    , Letter "s" "Stern" ( "aff")
+    , Letter "t" "Tanze" ( "aff")
+    , Letter "u" "Uhu" ( "aff")
+    , Letter "v" "Velo" ( "aff")
+    , Letter "w" "Winter" ( "aff")
+    , Letter "x" "Xylophone" ( "aff")
+    , Letter "y" "Yak" ( "aff")
+    , Letter "z" "Zug" ( "aff")
     ]
