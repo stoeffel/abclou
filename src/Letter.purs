@@ -2,6 +2,11 @@ module Letter
   ( Slot
   , Message(..)
   , Letter
+  , Input
+  , IsEnabled(..)
+  , disable
+  , state
+  , State
   , letters
   , fallback
   , component
@@ -30,15 +35,32 @@ data Letter = Letter String
 derive instance letterEq :: Eq Letter
 derive instance letterOrd :: Ord Letter
 
-type Input = Letter
+type Input = 
+  { letter :: Letter
+  , isEnabled :: IsEnabled
+  }
+
+data IsEnabled = Enabled | Disabled
+
+derive instance isEnabledEq :: Eq IsEnabled
 
 data Message = Selected Letter
 
 data Action 
   = Select
-  | HandleInput Letter
+  | HandleInput Input
 
-type State = { selected :: Boolean, letter :: Letter }
+type State = 
+  { selected :: Boolean
+  , letter :: Letter 
+  , isEnabled :: IsEnabled
+  }
+
+state :: Letter -> State
+state letter = { letter, isEnabled: Enabled, selected: false }
+
+disable :: State -> State
+disable state = state { isEnabled = Disabled }
 
 component :: forall q m. H.Component HH.HTML q Input Message m
 component =
@@ -52,13 +74,14 @@ component =
     }
 
 initialState :: Input -> State
-initialState letter = { selected: false, letter }
+initialState { letter, isEnabled } = { selected: false, isEnabled, letter }
 
 render :: forall m. State -> H.ComponentHTML Action () m
 render state =
   let (Letter label) = state.letter in
     HH.button
       [ HP.title label
+      , HP.enabled (state.isEnabled == Enabled)
       , HE.onClick \_ -> Just Select
       ]
       [ HH.text label ]
@@ -66,11 +89,12 @@ render state =
 handleAction :: forall m. Action -> H.HalogenM State Action () Message m Unit
 handleAction = case _ of
   Select -> do
-    state <- H.get
-    H.raise $ Selected state.letter
-  HandleInput newLetter -> do
-    state <- H.get
-    when (state.letter /= newLetter) $ H.put state { letter = newLetter }
+    st <- H.get
+    H.put st { selected = not st.selected }
+    H.raise $ Selected st.letter
+  HandleInput {letter, isEnabled} -> do
+    st <- H.get
+    when (st.isEnabled /= isEnabled) $ H.put st { isEnabled = isEnabled }
  
 fallback :: NonEmptyArray Letter
 fallback = AN.singleton (Letter "a")

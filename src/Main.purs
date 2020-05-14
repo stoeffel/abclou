@@ -42,11 +42,12 @@ data Message
 data Game 
   = NotStarted
   | Started Quiz
+  | TryAgain L.Letter Quiz
   | Correct L.Letter
 
 type Quiz =
-  { correct :: L.Letter
-  , letters :: NonEmptyArray L.Letter
+  { correct :: L.State
+  , letters :: NonEmptyArray L.State
   }
 
 type ChildSlots =
@@ -72,6 +73,7 @@ render :: forall m. Game -> View m
 render NotStarted = HH.text "Ein Moment..."
 render (Correct letter) = HH.text "Correct!"
 render (Started quiz) = viewQuiz quiz
+render (TryAgain _ _) = HH.text "Try again"
 
 viewQuiz :: forall m. Quiz -> View m
 viewQuiz quiz =
@@ -81,9 +83,9 @@ viewQuiz quiz =
         viewLetter <$> quiz.letters
     ]
 
-viewLetter :: forall m. L.Letter -> View m
-viewLetter letter =
-  HH.slot _letter letter L.component letter 
+viewLetter :: forall m. L.State -> View m
+viewLetter state@{letter} =
+  HH.slot _letter letter L.component { letter: state.letter, isEnabled: state.isEnabled }
     (Just <<< LetterMessage)
 
 handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
@@ -97,26 +99,40 @@ handleAction = case _ of
 handleLetterMessage :: L.Message -> H.HalogenM Game Action ChildSlots Message Aff Unit
 handleLetterMessage = case _ of
   L.Selected letter -> do
-    game <- H.modify (maybeCorrect letter)
-    nextGame <- H.liftAff (maybeNewGame game )
-    H.modify_ \_ -> nextGame
+    game <- H.get
+    next <- H.liftAff (maybeNewGame letter game) -- ^ TODO combine
+    H.put next
+    finally <- H.liftAff (nextGame next)
+    H.put finally
     H.raise $ Answered letter
 
-maybeNewGame :: Game -> Aff Game
-maybeNewGame (Correct _) = do
-  delay $ Milliseconds 1500.0
+nextGame :: Game -> Aff Game
+nextGame (Correct _) = do
+  intermission
   Started <$> H.liftEffect randomQuiz
-maybeNewGame game = pure game
+nextGame game@(TryAgain _ next) = do
+  intermission
+  pure $ Started next
+nextGame game = pure game
+
+maybeNewGame :: L.Letter -> Game -> Aff Game
+maybeNewGame answer game@(Started quiz)
+  | quiz.correct.letter == answer = pure $ Correct answer
+  | otherwise = 
+      pure <<< TryAgain answer
+        $ quiz {letters = disable answer <$> quiz.letters}
+maybeNewGame _ game = pure game
   
-maybeCorrect :: L.Letter -> Game -> Game
-maybeCorrect _ NotStarted = NotStarted
-maybeCorrect _ game@(Correct _) = game
-maybeCorrect answer game@(Started quiz)
-  | quiz.correct == answer = Correct answer
-  | otherwise = game -- TODO TryAgain
+disable :: L.Letter -> L.State -> L.State
+disable l st
+  | st.letter == l = L.disable st
+  | otherwise = st
+
+intermission :: Aff Unit
+intermission = delay $ Milliseconds 1500.0
 
 randomQuiz :: Effect Quiz
 randomQuiz = do
-  letters <- fromMaybe L.fallback <$> randomUniqElements 3 L.letters
+  letters <- map L.state <$> fromMaybe L.fallback <$> randomUniqElements 3 L.letters
   correct <- randomElement letters
   pure { correct, letters }
