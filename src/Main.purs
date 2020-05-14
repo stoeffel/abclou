@@ -7,9 +7,9 @@ import Letter as L
 import Data.Array as A
 import Data.Array.NonEmpty as AN
 import Data.Array.NonEmpty ((!!), NonEmptyArray)
-import Data.Foldable (foldM)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Symbol (SProxy(..))
+import Data.Time.Duration (Milliseconds(..))
 import Data.Unit
 
 import Halogen as H
@@ -20,10 +20,10 @@ import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
 
 import Effect (Effect)
-import Effect.Aff (Aff)
+import Effect.Aff (Aff, delay)
 import Effect.Console (log)
 import Effect.Random (randomInt)
-import Effect.Random.Extra (randomElement)
+import Effect.Random.Extra (randomElement, randomUniqElements)
 
 
 main :: Effect Unit
@@ -97,9 +97,17 @@ handleAction = case _ of
 handleLetterMessage :: L.Message -> H.HalogenM Game Action ChildSlots Message Aff Unit
 handleLetterMessage = case _ of
   L.Selected letter -> do
-    H.modify_ (maybeCorrect letter)
+    game <- H.modify (maybeCorrect letter)
+    nextGame <- H.liftAff (maybeNewGame game )
+    H.modify_ \_ -> nextGame
     H.raise $ Answered letter
 
+maybeNewGame :: Game -> Aff Game
+maybeNewGame (Correct _) = do
+  delay $ Milliseconds 1500.0
+  Started <$> H.liftEffect randomQuiz
+maybeNewGame game = pure game
+  
 maybeCorrect :: L.Letter -> Game -> Game
 maybeCorrect _ NotStarted = NotStarted
 maybeCorrect _ game@(Correct _) = game
@@ -109,10 +117,6 @@ maybeCorrect answer game@(Started quiz)
 
 randomQuiz :: Effect Quiz
 randomQuiz = do
-  let max = 3
-  first <- L.random
-  letters <- foldM 
-    (\acc _ -> L.random >>= (pure <<< AN.snoc acc ))
-    (AN.singleton first) (A.range 1 max)
+  letters <- fromMaybe L.fallback <$> randomUniqElements 3 L.letters
   correct <- randomElement letters
   pure { correct, letters }

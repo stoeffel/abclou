@@ -2,7 +2,8 @@ module Letter
   ( Slot
   , Message(..)
   , Letter
-  , random
+  , letters
+  , fallback
   , component
   ) where
 
@@ -71,11 +72,12 @@ handleAction = case _ of
     state <- H.get
     when (state.letter /= newLetter) $ H.put state { letter = newLetter }
  
-random :: Effect Letter
-random = 
-  randomElement
-    $ Letter
-    <$> AN.cons' "a"
+fallback :: NonEmptyArray Letter
+fallback = AN.singleton (Letter "a")
+
+letters :: NonEmptyArray Letter
+letters = 
+  Letter <$> AN.cons' "a"
     [ "b", "c", "d", "e"
     , "f", "g", "h", "i"
     , "j", "k", "l", "m"
