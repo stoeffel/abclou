@@ -3964,6 +3964,14 @@ var PS = {};
           });
       };
   };
+  var modify = function (dictMonadState) {
+      return function (f) {
+          return state(dictMonadState)(function (s) {
+              var s$prime = f(s);
+              return new Data_Tuple.Tuple(s$prime, s$prime);
+          });
+      };
+  };
   var get = function (dictMonadState) {
       return state(dictMonadState)(function (s) {
           return new Data_Tuple.Tuple(s, s);
@@ -3972,6 +3980,7 @@ var PS = {};
   exports["MonadState"] = MonadState;
   exports["get"] = get;
   exports["put"] = put;
+  exports["modify"] = modify;
   exports["modify_"] = modify_;
 })(PS);
 (function($PS) {
@@ -8960,34 +8969,30 @@ var PS = {};
           if (Data_Boolean.otherwise) {
               return st;
           };
-          throw new Error("Failed pattern match at Main (line 126, column 1 - line 126, column 42): " + [ l.constructor.name, st.constructor.name ]);
+          throw new Error("Failed pattern match at Main (line 122, column 1 - line 122, column 42): " + [ l.constructor.name, st.constructor.name ]);
       };
   };
   var maybeNewGame = function (v) {
       return function (v1) {
           if (v1 instanceof Started) {
               if (Data_Eq.eq(Letter.letterEq)(v1.value0.correct.letter)(v)) {
-                  return Control_Applicative.pure(Effect_Aff.applicativeAff)(new Correct(v));
+                  return new Correct(v);
               };
               if (Data_Boolean.otherwise) {
-                  return Control_Applicative.pure(Effect_Aff.applicativeAff)(TryAgain.create(v)({
+                  return TryAgain.create(v)({
                       correct: v1.value0.correct,
                       letters: Data_Functor.map(Data_Array_NonEmpty_Internal.functorNonEmptyArray)(disable(v))(v1.value0.letters)
-                  }));
+                  });
               };
           };
-          return Control_Applicative.pure(Effect_Aff.applicativeAff)(v1);
+          return v1;
       };
   };
   var handleLetterMessage = function (v) {
-      return Control_Bind.bind(Halogen_Query_HalogenM.bindHalogenM)(Control_Monad_State_Class.get(Halogen_Query_HalogenM.monadStateHalogenM))(function (game) {
-          return Control_Bind.bind(Halogen_Query_HalogenM.bindHalogenM)(Effect_Aff_Class.liftAff(Halogen_Query_HalogenM.monadAffHalogenM(Effect_Aff_Class.monadAffAff))(maybeNewGame(v.value0)(game)))(function (next) {
-              return Control_Bind.discard(Control_Bind.discardUnit)(Halogen_Query_HalogenM.bindHalogenM)(Control_Monad_State_Class.put(Halogen_Query_HalogenM.monadStateHalogenM)(next))(function () {
-                  return Control_Bind.bind(Halogen_Query_HalogenM.bindHalogenM)(Effect_Aff_Class.liftAff(Halogen_Query_HalogenM.monadAffHalogenM(Effect_Aff_Class.monadAffAff))(nextGame(next)))(function ($$finally) {
-                      return Control_Bind.discard(Control_Bind.discardUnit)(Halogen_Query_HalogenM.bindHalogenM)(Control_Monad_State_Class.put(Halogen_Query_HalogenM.monadStateHalogenM)($$finally))(function () {
-                          return Halogen_Query_HalogenM.raise(new Answered(v.value0));
-                      });
-                  });
+      return Control_Bind.bind(Halogen_Query_HalogenM.bindHalogenM)(Control_Monad_State_Class.modify(Halogen_Query_HalogenM.monadStateHalogenM)(maybeNewGame(v.value0)))(function (next) {
+          return Control_Bind.bind(Halogen_Query_HalogenM.bindHalogenM)(Effect_Aff_Class.liftAff(Halogen_Query_HalogenM.monadAffHalogenM(Effect_Aff_Class.monadAffAff))(nextGame(next)))(function ($$finally) {
+              return Control_Bind.discard(Control_Bind.discardUnit)(Halogen_Query_HalogenM.bindHalogenM)(Control_Monad_State_Class.put(Halogen_Query_HalogenM.monadStateHalogenM)($$finally))(function () {
+                  return Halogen_Query_HalogenM.raise(new Answered(v.value0));
               });
           });
       });

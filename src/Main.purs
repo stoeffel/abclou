@@ -99,9 +99,7 @@ handleAction = case _ of
 handleLetterMessage :: L.Message -> H.HalogenM Game Action ChildSlots Message Aff Unit
 handleLetterMessage = case _ of
   L.Selected letter -> do
-    game <- H.get
-    next <- H.liftAff (maybeNewGame letter game) -- ^ TODO combine
-    H.put next
+    next <- H.modify (maybeNewGame letter)
     finally <- H.liftAff (nextGame next)
     H.put finally
     H.raise $ Answered letter
@@ -115,13 +113,11 @@ nextGame game@(TryAgain _ next) = do
   pure $ Started next
 nextGame game = pure game
 
-maybeNewGame :: L.Letter -> Game -> Aff Game
+maybeNewGame :: L.Letter -> Game -> Game
 maybeNewGame answer game@(Started quiz)
-  | quiz.correct.letter == answer = pure $ Correct answer
-  | otherwise = 
-      pure <<< TryAgain answer
-        $ quiz {letters = disable answer <$> quiz.letters}
-maybeNewGame _ game = pure game
+  | quiz.correct.letter == answer = Correct answer
+  | otherwise = TryAgain answer $ quiz {letters = disable answer <$> quiz.letters}
+maybeNewGame _ game = game
   
 disable :: L.Letter -> L.State -> L.State
 disable l st
