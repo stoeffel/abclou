@@ -7,6 +7,7 @@ import Letter as L
 import Data.Array as A
 import Data.Array.NonEmpty as AN
 import Data.Array.NonEmpty ((!!), NonEmptyArray)
+import Data.FunctorWithIndex (mapWithIndex)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -51,7 +52,7 @@ type Quiz =
   }
 
 type ChildSlots =
-  ( letter :: L.Slot L.Letter
+  ( letter :: L.Slot Int
   )
 
 _letter = SProxy :: SProxy "letter"
@@ -70,22 +71,29 @@ initialState _ = NotStarted
 type View m = H.ComponentHTML Action ChildSlots m
 
 render :: forall m. Game -> View m
-render NotStarted = HH.text "Ein Moment..."
-render (Correct letter) = HH.text "Correct!"
-render (Started quiz) = viewQuiz quiz
-render (TryAgain _ _) = HH.text "Try again"
+render NotStarted = container [HH.text "Ein Moment..."]
+render (Correct letter) = container [HH.text "Correct!"]
+render (Started quiz) = container [viewQuiz quiz]
+render (TryAgain _ _) = container [HH.text "Try again"]
+
+container :: forall m. Array (View m) -> View m
+container body = 
+  HH.div_ 
+  [ HH.h1_ [ HH.text "AbcLou" ]
+  , HH.div_ body
+  ]
 
 viewQuiz :: forall m. Quiz -> View m
 viewQuiz quiz =
   HH.div_
-    [ viewLetter quiz.correct
+    [ viewLetter 0 quiz.correct
     , HH.ul_ $ AN.toArray $
-        viewLetter <$> quiz.letters
+        mapWithIndex viewLetter quiz.letters
     ]
 
-viewLetter :: forall m. L.State -> View m
-viewLetter state@{letter} =
-  HH.slot _letter letter L.component { letter: state.letter, isEnabled: state.isEnabled }
+viewLetter :: forall m. Int -> L.State -> View m
+viewLetter index state@{letter} =
+  HH.slot _letter index L.component { letter: state.letter, isEnabled: state.isEnabled }
     (Just <<< LetterMessage)
 
 handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
