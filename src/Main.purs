@@ -16,9 +16,13 @@ import Data.Unit
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
+import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.VDom.Driver (runUI)
+
+import CSS as CSS
+import CSS.Common as CSS
 
 import Effect (Effect)
 import Effect.Aff (Aff, delay)
@@ -53,8 +57,10 @@ type Quiz =
 
 type ChildSlots =
   ( letter :: L.Slot Int
+  , description :: L.Slot Int
   )
 
+_description = SProxy :: SProxy "description"
 _letter = SProxy :: SProxy "letter"
 
 component :: forall q i . H.Component HH.HTML q i Message Aff
@@ -77,23 +83,37 @@ render (Started quiz) = container [viewQuiz quiz]
 render (TryAgain _ _) = container [HH.text "Try again"]
 
 container :: forall m. Array (View m) -> View m
-container body = 
-  HH.div_ 
-  [ HH.h1_ [ HH.text "AbcLou" ]
-  , HH.div_ body
+container = 
+  HH.div 
+  [ HC.style $ do
+      CSS.display CSS.flex 
+      CSS.alignItems CSS.center 
+      CSS.flexDirection CSS.column
+      CSS.maxHeight $ CSS.pct 100.0
   ]
+  <<< A.cons (HH.h1_ [ HH.text "AbcLou" ])
 
 viewQuiz :: forall m. Quiz -> View m
 viewQuiz quiz =
   HH.div_
-    [ viewLetter 0 quiz.correct
-    , HH.ul_ $ AN.toArray $
-        mapWithIndex viewLetter quiz.letters
+    [ viewDescription quiz.correct
+    , HH.ul
+        [ HC.style $ do
+            CSS.display CSS.flex 
+            CSS.justifyContent CSS.spaceBetween
+            CSS.padding CSS.nil CSS.nil CSS.nil CSS.nil
+            CSS.height $ CSS.px 80.0
+        ]
+        $ AN.toArray $ mapWithIndex viewLetter quiz.letters
     ]
+
+viewDescription :: forall m. L.State -> View m
+viewDescription {letter, isEnabled} =
+  HH.slot _description 0 L.description letter (const Nothing)
 
 viewLetter :: forall m. Int -> L.State -> View m
 viewLetter index state@{letter} =
-  HH.slot _letter index L.component { letter: state.letter, isEnabled: state.isEnabled }
+  HH.slot _letter index L.letter { letter: state.letter, isEnabled: state.isEnabled }
     (Just <<< LetterMessage)
 
 handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
