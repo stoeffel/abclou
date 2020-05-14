@@ -31,7 +31,7 @@ derive instance letterOrd :: Ord Letter
 
 type Input = Letter
 
-data Message = Selected
+data Message = Selected Letter
 
 data Action 
   = Select
@@ -64,7 +64,9 @@ render state =
 
 handleAction :: forall m. Action -> H.HalogenM State Action () Message m Unit
 handleAction = case _ of
-  Select -> H.raise Selected
+  Select -> do
+    state <- H.get
+    H.raise $ Selected state.letter
   HandleInput newLetter -> do
     state <- H.get
     when (state.letter /= newLetter) $ H.put state { letter = newLetter }

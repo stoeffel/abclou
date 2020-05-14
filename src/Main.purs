@@ -23,6 +23,7 @@ import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Console (log)
 import Effect.Random (randomInt)
+import Effect.Random.Extra (randomElement)
 
 
 main :: Effect Unit
@@ -31,18 +32,20 @@ main = HA.runHalogenAff do
   runUI component unit body
 
 data Action
-  = LetterMessage L.Letter L.Message
+  = LetterMessage L.Message
   | Initialize
 
 data Message
   = Initialized 
-
+  | Answered L.Letter
+ 
 data Game 
   = NotStarted
   | Started Quiz
+  | Correct L.Letter
 
 type Quiz =
-  { correct :: Int
+  { correct :: L.Letter
   , letters :: NonEmptyArray L.Letter
   }
 
@@ -63,19 +66,25 @@ component =
 initialState :: forall i. i -> Game
 initialState _ = NotStarted
 
-render :: forall m. Game -> H.ComponentHTML Action ChildSlots m
+type View m = H.ComponentHTML Action ChildSlots m
+
+render :: forall m. Game -> View m
 render NotStarted = HH.text "Ein Moment..."
-render (Started quiz) =
+render (Correct letter) = HH.text "Correct!"
+render (Started quiz) = viewQuiz quiz
+
+viewQuiz :: forall m. Quiz -> View m
+viewQuiz quiz =
   HH.div_
-    [ HH.text (show quiz.correct)
+    [ viewLetter quiz.correct
     , HH.ul_ $ AN.toArray $
         viewLetter <$> quiz.letters
     ]
 
-viewLetter :: forall m. L.Letter -> H.ComponentHTML Action ChildSlots m
+viewLetter :: forall m. L.Letter -> View m
 viewLetter letter =
   HH.slot _letter letter L.component letter 
-    (Just <<< LetterMessage letter)
+    (Just <<< LetterMessage)
 
 handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
 handleAction = case _ of
@@ -83,14 +92,27 @@ handleAction = case _ of
     quiz <- H.liftEffect randomQuiz
     H.modify_ \_ -> Started quiz
     H.raise Initialized
-  LetterMessage letter msg -> pure unit
+  LetterMessage msg -> handleLetterMessage msg
+
+handleLetterMessage :: L.Message -> H.HalogenM Game Action ChildSlots Message Aff Unit
+handleLetterMessage = case _ of
+  L.Selected letter -> do
+    H.modify_ (maybeCorrect letter)
+    H.raise $ Answered letter
+
+maybeCorrect :: L.Letter -> Game -> Game
+maybeCorrect _ NotStarted = NotStarted
+maybeCorrect _ game@(Correct _) = game
+maybeCorrect answer game@(Started quiz)
+  | quiz.correct == answer = Correct answer
+  | otherwise = game -- TODO TryAgain
 
 randomQuiz :: Effect Quiz
 randomQuiz = do
   let max = 3
-  correct <- randomInt 0 max
   first <- L.random
   letters <- foldM 
     (\acc _ -> L.random >>= (pure <<< AN.snoc acc ))
     (AN.singleton first) (A.range 1 max)
+  correct <- randomElement letters
   pure { correct, letters }
