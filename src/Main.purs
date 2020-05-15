@@ -48,6 +48,9 @@ data Message
   = Initialized 
   | Answered Letter
  
+type Model = 
+  { game :: Game
+  }
 data Game 
   = NotStarted
   | Started Attempts Quiz
@@ -99,8 +102,8 @@ component =
     , eval : H.mkEval $ H.defaultEval { handleAction = handleAction, initialize = Just Initialize}
     }
 
-initialState :: forall i. i -> Game
-initialState _ = NotStarted
+initialState :: forall i. i -> Model
+initialState _ = { game: NotStarted }
 
 
 type View c m = H.ComponentHTML Action c m
@@ -117,11 +120,11 @@ color3 = CSS.rgba 131 73 99 1.0
 color4 :: CSS.Color
 color4 = CSS.rgba 112 77 78 1.0
 
-render :: forall c m. Game -> View c m
-render NotStarted = container [HH.text "Ein Moment..."]
-render (Started attempt quiz) = container [viewQuiz attempt quiz]
-render (Correct letter) = container [HH.text "Correct!"]
-render (TryAgain _ _) = container [HH.text "Try again"]
+render :: forall c m. Model -> View c m
+render { game: NotStarted } = container [HH.text "Ein Moment..."]
+render { game: Started attempt quiz } = container [viewQuiz attempt quiz]
+render { game: Correct letter } = container [HH.text "Correct!"]
+render { game: TryAgain _ _ } = container [HH.text "Try again"]
 
 container :: forall c m. Array (View c m) -> View c m
 container = 
@@ -211,17 +214,19 @@ viewLetter attempt letter@{character} =
     [ HH.text (SCU.singleton character) ]
 
 
-handleAction ::  forall c. Action -> H.HalogenM Game Action c Message Aff Unit
+handleAction ::  forall c. Action -> H.HalogenM Model Action c Message Aff Unit
 handleAction = case _ of
   Initialize -> do
     quiz <- H.liftEffect randomQuiz
     _ <- H.liftEffect (log "HELLO")
-    H.put $ Started First quiz
+    H.modify_ \model -> model { game = Started First quiz }
     H.raise Initialized
   SelectLetter letter -> do
     next <- H.modify (answeredCorrectly letter)
-    case next of
-      Correct _ -> H.liftAff nextGame >>= H.put 
+    case next.game of
+      Correct _ -> do
+         finally <- H.liftAff nextGame
+         H.modify_ \model -> model { game = finally }
       _ -> H.put next
     H.raise $ Answered letter
 
@@ -231,15 +236,18 @@ nextGame = do
   delay $ Milliseconds 1500.0
   Started First <$> H.liftEffect randomQuiz
 
-answeredCorrectly :: Letter -> Game -> Game
-answeredCorrectly answer game@(Started attempt quiz)
-  | quiz.correct.character == answer.character = Correct answer
-  | otherwise = flip Started quiz $
-      case attempt of
-        First -> Second answer
-        Second firstAnswer -> Third firstAnswer answer
-        a -> a
-answeredCorrectly _ game = game
+answeredCorrectly :: Letter -> Model -> Model
+answeredCorrectly answer model@{ game : Started attempt quiz }
+  | quiz.correct.character == answer.character = model { game = Correct answer }
+  | otherwise = 
+      model
+        { game = flip Started quiz $
+            case attempt of
+              First -> Second answer
+              Second firstAnswer -> Third firstAnswer answer
+              a -> a
+        }
+answeredCorrectly _ model = model
 
 -- TODO take allLetters as a argument and add them to the Model to allow changing the frequency
 randomQuiz :: Effect Quiz
