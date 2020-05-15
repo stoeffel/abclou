@@ -31,7 +31,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, delay)
 import Effect.Console (log)
 import Effect.Random (randomInt)
-import Effect.Random.Extra (randomElement, randomUniqElements)
+import Effect.Random.Extra (randomWeighted, randomUniqElements)
 
 
 main :: Effect Unit
@@ -69,6 +69,7 @@ type Letter =
   { character :: Char
   , word :: String
   , asset :: Assets.Asset
+  , frequency :: Number
   }
 
 data LetterState = Enabled | Wrong | Disabled
@@ -218,7 +219,7 @@ handleAction = case _ of
     H.put $ Started First quiz
     H.raise Initialized
   SelectLetter letter -> do
-    next <- H.modify (maybeNewGame letter)
+    next <- H.modify (answeredCorrectly letter)
     case next of
       Correct _ -> H.liftAff nextGame >>= H.put 
       _ -> H.put next
@@ -230,52 +231,54 @@ nextGame = do
   delay $ Milliseconds 1500.0
   Started First <$> H.liftEffect randomQuiz
 
-maybeNewGame :: Letter -> Game -> Game
-maybeNewGame answer game@(Started attempt quiz)
+answeredCorrectly :: Letter -> Game -> Game
+answeredCorrectly answer game@(Started attempt quiz)
   | quiz.correct.character == answer.character = Correct answer
   | otherwise = flip Started quiz $
       case attempt of
         First -> Second answer
         Second firstAnswer -> Third firstAnswer answer
         a -> a
-maybeNewGame _ game = game
-  
+answeredCorrectly _ game = game
+
+-- TODO take allLetters as a argument and add them to the Model to allow changing the frequency
 randomQuiz :: Effect Quiz
 randomQuiz = do
-  let letterA = AN.singleton $ snd $ AN.head allLetters
-  letters <- M.fromMaybe letterA <$> randomUniqElements 3 allLetters
-  correct <- randomElement letters
+  let letterA = AN.singleton $ AN.head allLetters
+  let toFrequencyTuple x@{frequency} = Tuple frequency x
+  letters <- M.fromMaybe letterA <$> randomUniqElements 3 (toFrequencyTuple <$> allLetters)
+  correct <- randomWeighted (toFrequencyTuple <$> letters)
   pure { correct, letters }
 
-allLetters :: NonEmptyArray (Tuple Number Letter)
+allLetters :: NonEmptyArray Letter
 allLetters = 
   let
-    a :: Tuple Number Letter
-    a = Tuple 1.0 { character: 'A', word: "Aff", asset: Assets.aff }
+    a :: Letter
+    a = { character: 'A', word: "Aff", asset: Assets.aff, frequency: 1.0 }
    in AN.cons' a $
-     [ Tuple 1.0 { character: 'B', word: "Bär", asset: Assets.aff }
-     , Tuple 1.0 { character: 'C', word: "Clown", asset: Assets.aff }
-     , Tuple 1.0 { character: 'D', word: "Dame", asset: Assets.aff }
-     , Tuple 1.0 { character: 'E', word: "Elch", asset: Assets.aff }
-     , Tuple 1.0 { character: 'F', word: "Fuchs", asset: Assets.aff }
-     , Tuple 1.0 { character: 'G', word: "Giraffe", asset: Assets.aff }
-     , Tuple 1.0 { character: 'H', word: "Hund", asset: Assets.aff }
-     , Tuple 1.0 { character: 'I', word: "Igel", asset: Assets.aff }
-     , Tuple 1.0 { character: 'J', word: "Jäger", asset: Assets.aff }
-     , Tuple 1.0 { character: 'K', word: "Karate", asset: Assets.aff }
-     , Tuple 1.0 { character: 'L', word: "Lache", asset: Assets.aff }
-     , Tuple 1.0 { character: 'M', word: "Mama", asset: Assets.aff }
-     , Tuple 1.0 { character: 'N', word: "Nase", asset: Assets.aff }
-     , Tuple 1.0 { character: 'O', word: "Ohr", asset: Assets.aff }
-     , Tuple 1.0 { character: 'P', word: "Papa", asset: Assets.aff }
-     , Tuple 1.0 { character: 'Q', word: "Quack", asset: Assets.aff }
-     , Tuple 1.0 { character: 'R', word: "Raggete", asset: Assets.aff }
-     , Tuple 1.0 { character: 'S', word: "Stern", asset: Assets.aff }
-     , Tuple 1.0 { character: 'T', word: "Tanze", asset: Assets.aff }
-     , Tuple 1.0 { character: 'U', word: "Uhu", asset: Assets.aff }
-     , Tuple 1.0 { character: 'V', word: "Velo", asset: Assets.aff }
-     , Tuple 1.0 { character: 'W', word: "Winter", asset: Assets.aff }
-     , Tuple 1.0 { character: 'X', word: "Xylophone", asset: Assets.aff }
-     , Tuple 1.0 { character: 'Y', word: "Yak", asset: Assets.aff }
-     , Tuple 1.0 { character: 'Z', word: "Zug", asset: Assets.aff }
+     [ { character: 'B', word: "Bär", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'C', word: "Clown", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'D', word: "Dame", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'E', word: "Elch", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'F', word: "Fuchs", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'G', word: "Giraffe", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'H', word: "Hund", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'I', word: "Igel", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'J', word: "Jäger", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'K', word: "Karate", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'L', word: "Lache", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'M', word: "Mama", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'N', word: "Nase", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'O', word: "Ohr", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'P', word: "Papa", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Q', word: "Quack", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'R', word: "Raggete", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'S', word: "Stern", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'T', word: "Tanze", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'U', word: "Uhu", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'V', word: "Velo", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'W', word: "Winter", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'X', word: "Xylophone", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Y', word: "Yak", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Z', word: "Zug", asset: Assets.aff, frequency: 1.0 }
     ]
