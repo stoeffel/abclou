@@ -42,7 +42,7 @@ import CSS.Common as CSS
 
 type Slot p = forall q. H.Slot q Message p
 
-data Letter = Letter String String String
+data Letter = Letter String String Assets.Asset
 
 derive instance letterEq :: Eq Letter
 derive instance letterOrd :: Ord Letter
@@ -177,7 +177,7 @@ handleActionDesc = case _ of
     st <- H.get
     when (st /= letter) $ H.put letter
  
-a = Letter "a" "Aff" ("aff")
+a = Letter "a" "Aff" Assets.aff
 
 fallback :: NonEmptyArray Letter
 fallback = AN.singleton a
@@ -185,29 +185,29 @@ fallback = AN.singleton a
 letters :: NonEmptyArray Letter
 letters = 
    AN.cons' a $
-    [ Letter "b" "Bär" ("aff")
-    , Letter "c" "Clown" ("aff")
-    , Letter "d" "Dame" ( "aff")
-    , Letter "e" "Elch" ( "aff")
-    , Letter "f" "Fuchs" ( "aff")
-    , Letter "g" "Giraffe" ( "aff")
-    , Letter "h" "Hund" ( "aff")
-    , Letter "i" "Igel" ( "aff")
-    , Letter "j" "Jäger" ( "aff")
-    , Letter "k" "Karate" ( "aff")
-    , Letter "l" "Lache" ( "aff")
-    , Letter "m" "Mama" ( "aff")
-    , Letter "n" "Nase" ( "aff")
-    , Letter "o" "Ohr" ( "aff")
-    , Letter "p" "Papa" ( "aff")
-    , Letter "q" "Quack" ( "aff")
-    , Letter "r" "Raggete" ( "aff")
-    , Letter "s" "Stern" ( "aff")
-    , Letter "t" "Tanze" ( "aff")
-    , Letter "u" "Uhu" ( "aff")
-    , Letter "v" "Velo" ( "aff")
-    , Letter "w" "Winter" ( "aff")
-    , Letter "x" "Xylophone" ( "aff")
-    , Letter "y" "Yak" ( "aff")
-    , Letter "z" "Zug" ( "aff")
+    [ Letter "b" "Bär" Assets.aff
+    , Letter "c" "Clown" Assets.aff
+    , Letter "d" "Dame" Assets.aff
+    , Letter "e" "Elch" Assets.aff
+    , Letter "f" "Fuchs" Assets.aff
+    , Letter "g" "Giraffe" Assets.aff
+    , Letter "h" "Hund" Assets.aff
+    , Letter "i" "Igel" Assets.aff
+    , Letter "j" "Jäger" Assets.aff
+    , Letter "k" "Karate" Assets.aff
+    , Letter "l" "Lache" Assets.aff
+    , Letter "m" "Mama" Assets.aff
+    , Letter "n" "Nase" Assets.aff
+    , Letter "o" "Ohr" Assets.aff
+    , Letter "p" "Papa" Assets.aff
+    , Letter "q" "Quack" Assets.aff
+    , Letter "r" "Raggete" Assets.aff
+    , Letter "s" "Stern" Assets.aff
+    , Letter "t" "Tanze" Assets.aff
+    , Letter "u" "Uhu" Assets.aff
+    , Letter "v" "Velo" Assets.aff
+    , Letter "w" "Winter" Assets.aff
+    , Letter "x" "Xylophone" Assets.aff
+    , Letter "y" "Yak" Assets.aff
+    , Letter "z" "Zug" Assets.aff
     ]
