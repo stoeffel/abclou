@@ -1,21 +1,15 @@
 module Main where
 
 import Prelude
-import Assets as Assets
+
+import Letter as Letter
+import Letter (Letter)
 
 import Data.Array as A
-import Data.Array.NonEmpty ((!!), NonEmptyArray)
+import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Maybe (Maybe(..))
-import Data.Maybe as M
-import Data.Tuple (Tuple(..), snd)
-import Data.String as S
-import Data.String.NonEmpty as SN
-import Data.String.NonEmpty.CodeUnits as SNC
-import Data.String.CodeUnits as SCU
-import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
-import Data.Unit
 
 import Halogen as H
 import Halogen.Aff as HA
@@ -31,9 +25,6 @@ import CSS.Flexbox as FB
 
 import Effect (Effect)
 import Effect.Aff (Aff, delay)
-import Effect.Console (log)
-import Effect.Random (randomInt)
-import Effect.Random.Extra (randomWeighted, randomUniqElements)
 
 
 main :: Effect Unit
@@ -63,17 +54,9 @@ data Attempts
   | Second Letter
   | Third Letter Letter
 
-
 type Quiz =
   { correct :: Letter
   , letters :: NonEmptyArray Letter
-  }
-
-type Letter =
-  { character :: Char
-  , word :: String
-  , asset :: Assets.Asset
-  , frequency :: Number
   }
 
 data LetterState = Enabled | Wrong | Disabled
@@ -104,47 +87,7 @@ component =
     }
 
 initialState :: forall i. i -> Model
-initialState _ = { game: NotStarted, letters: initialLetters }
-
-initialLetters :: NonEmptyArray Letter
-initialLetters = 
-  let
-    mkLetter :: SN.NonEmptyString -> Assets.Asset -> Letter
-    mkLetter word asset =
-      { character: (SNC.uncons word).head
-      , word: SN.toString word
-      , asset
-      , frequency: 1.0 
-      }
-    a :: Letter
-    a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.aff
-   in AN.cons' a $
-     [ mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.aff
-     , mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.aff
-    ]
+initialState _ = { game: NotStarted, letters: Letter.all }
 
 
 type View c m = H.ComponentHTML Action c m
@@ -214,7 +157,7 @@ viewCorrect letter =
         [ HC.style $ do
             CSS.fontSize $ CSS.em 4.0
         ]
-        [ HH.text letter.word ]
+        [ HH.text $ Letter.word letter ]
     ]
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
 viewLetters attempt letters =
@@ -230,23 +173,23 @@ viewLetters attempt letters =
     $ AN.toArray $ viewLetter attempt <$> letters
 
 viewWordImage :: forall c m. Letter -> View c m
-viewWordImage {word, asset} =
+viewWordImage letter =
   HH.img
-    [ HP.alt word
-    , HP.title word
-    , HP.src (Assets.for asset)
+    [ HP.alt $ Letter.word letter
+    , HP.title $ Letter.word letter
+    , HP.src $ Letter.asset letter
     , HC.style $ do
         CSS.height $ CSS.px 400.0
         CSS.width $ CSS.px 400.0
     ]
 
 viewLetter :: forall c m. Attempts -> Letter -> View c m
-viewLetter attempt letter@{character} =
+viewLetter attempt letter =
   let state = attemptToState attempt letter in
   HH.button
-    [ HP.title (SCU.singleton character)
+    [ HP.title (Letter.character letter)
     , HP.enabled (state == Enabled)
-    , HP.id_ (SCU.singleton character)
+    , HP.id_ (Letter.character letter)
     , HP.classes 
         [ HH.ClassName "letter"
         , HH.ClassName (show state)
@@ -265,7 +208,7 @@ viewLetter attempt letter@{character} =
           Wrong -> CSS.backgroundColor color2
     , HE.onClick \_ -> Just (SelectLetter letter)
     ]
-    [ HH.text (SCU.singleton character) ]
+    [ HH.text (Letter.character letter) ]
 
 
 handleAction ::  forall c m. Action -> H.HalogenM Model Action c m Aff Unit
@@ -288,7 +231,7 @@ handleAction = case _ of
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | quiz.correct.character == answer.character =
+  | Letter.sameCharacter quiz.correct answer =
       model { game = Correct answer, letters = updateFrequency (-2.0) quiz.correct <$> letters }
   | otherwise = 
       model
@@ -303,17 +246,8 @@ answeredCorrectly _ model = model
 
 updateFrequency :: Number -> Letter -> Letter -> Letter
 updateFrequency delta a b
-  | a == b = b { frequency = clamp 1.0 5.0 $ b.frequency + delta }
+  | a == b = Letter.adjustFrequency delta b
   | otherwise = b
 
 newGame :: NonEmptyArray Letter -> Effect Game
-newGame letters = Started First <$> randomQuiz letters
-
-randomQuiz :: NonEmptyArray Letter -> Effect Quiz
-randomQuiz letters = do
-  let letterA = AN.singleton $ AN.head letters
-  let toFrequencyTuple x@{frequency} = Tuple frequency x
-  letters <- M.fromMaybe letterA <$> randomUniqElements 3 (toFrequencyTuple <$> letters)
-  correct <- randomWeighted (toFrequencyTuple <$> letters)
-  pure { correct, letters }
-
+newGame letters = Started First <$> Letter.random letters
