@@ -50,7 +50,9 @@ data Message
  
 type Model = 
   { game :: Game
+  , letters :: NonEmptyArray Letter
   }
+
 data Game 
   = NotStarted
   | Started Attempts Quiz
@@ -103,7 +105,40 @@ component =
     }
 
 initialState :: forall i. i -> Model
-initialState _ = { game: NotStarted }
+initialState _ = { game: NotStarted, letters: initialLetters }
+
+initialLetters :: NonEmptyArray Letter
+initialLetters = 
+  let
+    a :: Letter
+    a = { character: 'A', word: "Aff", asset: Assets.aff, frequency: 1.0 }
+   in AN.cons' a $
+     [ { character: 'B', word: "Bär", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'C', word: "Clown", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'D', word: "Dame", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'E', word: "Elch", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'F', word: "Fuchs", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'G', word: "Giraffe", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'H', word: "Hund", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'I', word: "Igel", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'J', word: "Jäger", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'K', word: "Karate", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'L', word: "Lache", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'M', word: "Mama", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'N', word: "Nase", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'O', word: "Ohr", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'P', word: "Papa", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Q', word: "Quack", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'R', word: "Raggete", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'S', word: "Stern", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'T', word: "Tanze", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'U', word: "Uhu", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'V', word: "Velo", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'W', word: "Winter", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'X', word: "Xylophone", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Y', word: "Yak", asset: Assets.aff, frequency: 1.0 }
+     , { character: 'Z', word: "Zug", asset: Assets.aff, frequency: 1.0 }
+    ]
 
 
 type View c m = H.ComponentHTML Action c m
@@ -217,7 +252,8 @@ viewLetter attempt letter@{character} =
 handleAction ::  forall c. Action -> H.HalogenM Model Action c Message Aff Unit
 handleAction = case _ of
   Initialize -> do
-    quiz <- H.liftEffect randomQuiz
+    model <- H.get
+    quiz <- H.liftEffect (randomQuiz model.letters)
     _ <- H.liftEffect (log "HELLO")
     H.modify_ \model -> model { game = Started First quiz }
     H.raise Initialized
@@ -225,16 +261,16 @@ handleAction = case _ of
     next <- H.modify (answeredCorrectly letter)
     case next.game of
       Correct _ -> do
-         finally <- H.liftAff nextGame
+         finally <- H.liftAff (nextGame next.letters)
          H.modify_ \model -> model { game = finally }
       _ -> H.put next
     H.raise $ Answered letter
 
 
-nextGame :: Aff Game
-nextGame = do
+nextGame :: NonEmptyArray Letter -> Aff Game
+nextGame letters = do
   delay $ Milliseconds 1500.0
-  Started First <$> H.liftEffect randomQuiz
+  Started First <$> H.liftEffect (randomQuiz letters)
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ game : Started attempt quiz }
@@ -250,43 +286,11 @@ answeredCorrectly answer model@{ game : Started attempt quiz }
 answeredCorrectly _ model = model
 
 -- TODO take allLetters as a argument and add them to the Model to allow changing the frequency
-randomQuiz :: Effect Quiz
-randomQuiz = do
-  let letterA = AN.singleton $ AN.head allLetters
+randomQuiz :: NonEmptyArray Letter -> Effect Quiz
+randomQuiz letters = do
+  let letterA = AN.singleton $ AN.head letters
   let toFrequencyTuple x@{frequency} = Tuple frequency x
-  letters <- M.fromMaybe letterA <$> randomUniqElements 3 (toFrequencyTuple <$> allLetters)
+  letters <- M.fromMaybe letterA <$> randomUniqElements 3 (toFrequencyTuple <$> letters)
   correct <- randomWeighted (toFrequencyTuple <$> letters)
   pure { correct, letters }
 
-allLetters :: NonEmptyArray Letter
-allLetters = 
-  let
-    a :: Letter
-    a = { character: 'A', word: "Aff", asset: Assets.aff, frequency: 1.0 }
-   in AN.cons' a $
-     [ { character: 'B', word: "Bär", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'C', word: "Clown", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'D', word: "Dame", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'E', word: "Elch", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'F', word: "Fuchs", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'G', word: "Giraffe", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'H', word: "Hund", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'I', word: "Igel", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'J', word: "Jäger", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'K', word: "Karate", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'L', word: "Lache", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'M', word: "Mama", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'N', word: "Nase", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'O', word: "Ohr", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'P', word: "Papa", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Q', word: "Quack", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'R', word: "Raggete", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'S', word: "Stern", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'T', word: "Tanze", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'U', word: "Uhu", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'V', word: "Velo", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'W', word: "Winter", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'X', word: "Xylophone", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Y', word: "Yak", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Z', word: "Zug", asset: Assets.aff, frequency: 1.0 }
-    ]
