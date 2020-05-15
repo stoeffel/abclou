@@ -207,6 +207,7 @@ viewWordImage :: forall c m. Letter -> View c m
 viewWordImage {word, asset} =
   HH.img
     [ HP.alt word
+    , HP.title word
     , HP.src (Assets.for asset)
     , HC.style $ do
         CSS.height $ CSS.px 400.0
