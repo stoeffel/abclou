@@ -10,6 +10,8 @@ import Data.Maybe (Maybe(..))
 import Data.Maybe as M
 import Data.Tuple (Tuple(..), snd)
 import Data.String as S
+import Data.String.NonEmpty as SN
+import Data.String.NonEmpty.CodeUnits as SNC
 import Data.String.CodeUnits as SCU
 import Data.Symbol (SProxy(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -42,6 +44,7 @@ main = HA.runHalogenAff do
 
 data Action
   = Initialize
+  | InitializeCorrectForDebugging
   | SelectLetter Letter
 
 type Model = 
@@ -106,34 +109,41 @@ initialState _ = { game: NotStarted, letters: initialLetters }
 initialLetters :: NonEmptyArray Letter
 initialLetters = 
   let
+    mkLetter :: SN.NonEmptyString -> Assets.Asset -> Letter
+    mkLetter word asset =
+      { character: (SNC.uncons word).head
+      , word: SN.toString word
+      , asset
+      , frequency: 1.0 
+      }
     a :: Letter
-    a = { character: 'A', word: "Aff", asset: Assets.aff, frequency: 1.0 }
+    a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.aff
    in AN.cons' a $
-     [ { character: 'B', word: "Bär", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'C', word: "Clown", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'D', word: "Dame", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'E', word: "Elch", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'F', word: "Fuchs", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'G', word: "Giraffe", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'H', word: "Hund", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'I', word: "Igel", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'J', word: "Jäger", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'K', word: "Karate", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'L', word: "Lache", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'M', word: "Mama", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'N', word: "Nase", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'O', word: "Ohr", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'P', word: "Papa", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Q', word: "Quack", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'R', word: "Raggete", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'S', word: "Stern", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'T', word: "Tanze", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'U', word: "Uhu", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'V', word: "Velo", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'W', word: "Winter", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'X', word: "Xylophone", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Y', word: "Yak", asset: Assets.aff, frequency: 1.0 }
-     , { character: 'Z', word: "Zug", asset: Assets.aff, frequency: 1.0 }
+     [ mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.aff
+     , mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.aff
     ]
 
 
@@ -154,7 +164,7 @@ color4 = CSS.rgba 112 77 78 1.0
 render :: forall c m. Model -> View c m
 render { game: NotStarted } = container [HH.text "Ein Moment..."]
 render { game: Started attempt quiz } = container [viewQuiz attempt quiz]
-render { game: Correct letter } = container [HH.text "Correct!"]
+render { game: Correct letter } = container [viewCorrect letter]
 render { game: TryAgain _ _ } = container [HH.text "Try again"]
 
 container :: forall c m. Array (View c m) -> View c m
@@ -190,6 +200,22 @@ viewQuiz attempt quiz =
     , viewLetters attempt quiz.letters
     ]
 
+viewCorrect :: forall c m. Letter -> View c m
+viewCorrect letter =
+  HH.div 
+    [ HC.style $ do
+        CSS.alignItems CSS.center 
+        CSS.display CSS.flex 
+        CSS.flexDirection CSS.column
+        CSS.justifyContent CSS.spaceBetween 
+    ]
+    [ viewWordImage letter
+    , HH.h2 
+        [ HC.style $ do
+            CSS.fontSize $ CSS.em 4.0
+        ]
+        [ HH.text letter.word ]
+    ]
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
 viewLetters attempt letters =
   HH.ul
@@ -248,6 +274,10 @@ handleAction = case _ of
     {letters} <- H.get
     game <- H.liftEffect (newGame letters)
     H.modify_ _ { game = game }
+  InitializeCorrectForDebugging -> do
+    {letters} <- H.get
+    let a = AN.head letters
+    H.modify_ _ { game = Correct a }
   SelectLetter letter -> do
     {game, letters} <- H.modify (answeredCorrectly letter)
     case game of
