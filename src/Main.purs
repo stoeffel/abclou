@@ -273,7 +273,7 @@ answeredCorrectly _ model = model
 
 updateFrequency :: Number -> Letter -> Letter -> Letter
 updateFrequency delta a b
-  | a == b = b { frequency = max 1.0 $ b.frequency + delta }
+  | a == b = b { frequency = clamp 1.0 5.0 $ b.frequency + delta }
   | otherwise = b
 
 newGame :: NonEmptyArray Letter -> Effect Game
