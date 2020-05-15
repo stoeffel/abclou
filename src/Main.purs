@@ -44,10 +44,6 @@ data Action
   = Initialize
   | SelectLetter Letter
 
-data Message
-  = Initialized 
-  | Answered Letter
- 
 type Model = 
   { game :: Game
   , letters :: NonEmptyArray Letter
@@ -96,7 +92,7 @@ attemptToState (Third a b) c
   | b == c = Wrong
   | otherwise = Enabled
 
-component :: forall q i . H.Component HH.HTML q i Message Aff
+component :: forall q i m . H.Component HH.HTML q i m Aff
 component =
   H.mkComponent
     { initialState
@@ -190,35 +186,31 @@ viewQuiz attempt quiz =
         CSS.justifyContent CSS.spaceBetween 
         FB.flex 2 0 CSS.nil
     ]
-    [ viewDescription quiz.correct
-    , HH.ul
-        [ HC.style $ do
-            CSS.alignItems CSS.stretch
-            CSS.display CSS.flex 
-            CSS.justifyContent CSS.spaceBetween
-            CSS.margin ( CSS.em 1.2 ) CSS.nil CSS.nil CSS.nil
-            CSS.padding CSS.nil CSS.nil CSS.nil CSS.nil
-            FB.flex 2 0 CSS.nil
-        ]
-        $ AN.toArray $ viewLetter attempt <$> quiz.letters
+    [ viewWordImage quiz.correct
+    , viewLetters attempt quiz.letters
     ]
 
-viewDescription :: forall c m. Letter -> View c m
-viewDescription {word, asset} =
-  HH.div 
+viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
+viewLetters attempt letters =
+  HH.ul
     [ HC.style $ do
-        CSS.alignItems CSS.center 
+        CSS.alignItems CSS.stretch
         CSS.display CSS.flex 
-        CSS.flexDirection CSS.column
+        CSS.justifyContent CSS.spaceBetween
+        CSS.margin ( CSS.em 1.2 ) CSS.nil CSS.nil CSS.nil
+        CSS.padding CSS.nil CSS.nil CSS.nil CSS.nil
+        FB.flex 2 0 CSS.nil
     ]
-    [ HH.h3_ [HH.text word]
-    , HH.img
-        [ HP.alt word
-        , HP.src (Assets.for asset)
-        , HC.style $ do
-            CSS.height $ CSS.px 400.0
-            CSS.width $ CSS.px 400.0
-        ]
+    $ AN.toArray $ viewLetter attempt <$> letters
+
+viewWordImage :: forall c m. Letter -> View c m
+viewWordImage {word, asset} =
+  HH.img
+    [ HP.alt word
+    , HP.src (Assets.for asset)
+    , HC.style $ do
+        CSS.height $ CSS.px 400.0
+        CSS.width $ CSS.px 400.0
     ]
 
 viewLetter :: forall c m. Attempts -> Letter -> View c m
@@ -249,28 +241,19 @@ viewLetter attempt letter@{character} =
     [ HH.text (SCU.singleton character) ]
 
 
-handleAction ::  forall c. Action -> H.HalogenM Model Action c Message Aff Unit
+handleAction ::  forall c m. Action -> H.HalogenM Model Action c m Aff Unit
 handleAction = case _ of
   Initialize -> do
-    model <- H.get
-    quiz <- H.liftEffect (randomQuiz model.letters)
-    _ <- H.liftEffect (log "HELLO")
-    H.modify_ \model -> model { game = Started First quiz }
-    H.raise Initialized
+    {letters} <- H.get
+    game <- H.liftEffect (newGame letters)
+    H.modify_ _ { game = game }
   SelectLetter letter -> do
-    next <- H.modify (answeredCorrectly letter)
-    case next.game of
+    {game, letters} <- H.modify (answeredCorrectly letter)
+    case game of
       Correct _ -> do
-         finally <- H.liftAff (nextGame next.letters)
-         H.modify_ \model -> model { game = finally }
-      _ -> H.put next
-    H.raise $ Answered letter
-
-
-nextGame :: NonEmptyArray Letter -> Aff Game
-nextGame letters = do
-  delay $ Milliseconds 1500.0
-  Started First <$> H.liftEffect (randomQuiz letters)
+         finally <- H.liftAff $ H.liftEffect (newGame letters) <* delay (Milliseconds 1500.0)
+         H.modify_ _ { game = finally }
+      _ -> pure unit
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
@@ -292,7 +275,9 @@ updateFrequency delta a b
   | a == b = b { frequency = max 1.0 $ b.frequency + delta }
   | otherwise = b
 
--- TODO take allLetters as a argument and add them to the Model to allow changing the frequency
+newGame :: NonEmptyArray Letter -> Effect Game
+newGame letters = Started First <$> randomQuiz letters
+
 randomQuiz :: NonEmptyArray Letter -> Effect Quiz
 randomQuiz letters = do
   let letterA = AN.singleton $ AN.head letters
