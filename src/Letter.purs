@@ -3,7 +3,7 @@ module Letter
   , Message(..)
   , Letter
   , Input
-  , IsEnabled(..)
+  , LetterState(..)
   , disable
   , wrong
   , isWrong
@@ -49,14 +49,14 @@ derive instance letterOrd :: Ord Letter
 
 type Input = 
   { letter :: Letter
-  , isEnabled :: IsEnabled
+  , letterState :: LetterState
   }
 
-data IsEnabled = Enabled | Wrong | Disabled
+data LetterState = Enabled | Wrong | Disabled
 
-derive instance isEnabledEq :: Eq IsEnabled
+derive instance letterStateEq :: Eq LetterState
 
-instance isEnabledShow :: Show IsEnabled where
+instance letterStateShow :: Show LetterState where
   show Enabled = "enabled"
   show Disabled = "disabled"
   show Wrong = "wrong"
@@ -73,20 +73,20 @@ data ActionDesc
 type State = 
   { selected :: Boolean
   , letter :: Letter 
-  , isEnabled :: IsEnabled
+  , letterState :: LetterState
   }
 
 state :: Letter -> State
-state letter = { letter, isEnabled: Enabled, selected: false }
+state letter = { letter, letterState: Enabled, selected: false }
 
 disable :: State -> State
-disable state = state { isEnabled = Disabled }
+disable state = state { letterState = Disabled }
 
 wrong :: State -> State
-wrong state = state { isEnabled = Wrong }
+wrong state = state { letterState = Wrong }
 
 isWrong :: State -> Boolean
-isWrong state = state.isEnabled == Wrong
+isWrong state = state.letterState == Wrong
 
 letter :: forall q m. H.Component HH.HTML q Input Message m
 letter =
@@ -111,7 +111,7 @@ description =
     }
 
 initialState :: Input -> State
-initialState { letter, isEnabled } = { selected: false, isEnabled, letter }
+initialState { letter, letterState } = { selected: false, letterState, letter }
 
 renderDescription :: forall m. Letter -> H.ComponentHTML ActionDesc () m
 renderDescription (Letter _ desc imgSrc) =
@@ -139,11 +139,11 @@ renderLetter state =
   let (Letter label _ _) = state.letter in
     HH.button
       [ HP.title (toUpper label)
-      , HP.enabled (state.isEnabled == Enabled)
+      , HP.enabled (state.letterState == Enabled)
       , HP.id_ label
       , HP.classes 
         [ HH.ClassName "letter"
-        , HH.ClassName $ show state.isEnabled 
+        , HH.ClassName $ show state.letterState 
         ]
       , HC.style $ do
          CSS.fontSize $ CSS.em 6.0
@@ -153,7 +153,7 @@ renderLetter state =
          CSS.maxHeight $ CSS.px 150.0
          CSS.borderRadius (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) 
          CSS.margin (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0)
-         case state.isEnabled of
+         case state.letterState of
            Enabled -> CSS.backgroundColor color1
            Disabled -> CSS.backgroundColor color2
            Wrong -> CSS.backgroundColor color2
@@ -167,9 +167,9 @@ handleAction = case _ of
     st <- H.get
     H.put st { selected = not st.selected }
     H.raise $ Selected st.letter
-  HandleInput {letter, isEnabled} -> do
+  HandleInput {letter, letterState} -> do
     st <- H.get
-    when (st.isEnabled /= isEnabled) $ H.put st { isEnabled = isEnabled }
+    when (st.letterState /= letterState) $ H.put st { letterState = letterState }
 
 handleActionDesc :: forall m. ActionDesc -> H.HalogenM Letter ActionDesc () Message m Unit
 handleActionDesc = case _ of

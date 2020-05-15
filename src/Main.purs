@@ -130,12 +130,12 @@ viewQuiz quiz =
     ]
 
 viewDescription :: forall m. L.State -> View m
-viewDescription {letter, isEnabled} =
+viewDescription {letter, letterState} =
   HH.slot _description 0 L.description letter (const Nothing)
 
 viewLetter :: forall m. Int -> L.State -> View m
 viewLetter index state@{letter} =
-  HH.slot _letter index L.letter { letter: state.letter, isEnabled: state.isEnabled }
+  HH.slot _letter index L.letter { letter: state.letter, letterState: state.letterState }
     (Just <<< LetterMessage)
 
 handleAction ::  Action -> H.HalogenM Game Action ChildSlots Message Aff Unit
