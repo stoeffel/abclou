@@ -8,6 +8,7 @@ import Data.Array.NonEmpty ((!!), NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Maybe (Maybe(..))
 import Data.Maybe as M
+import Data.Tuple (Tuple(..), snd)
 import Data.String as S
 import Data.String.CodeUnits as SCU
 import Data.Symbol (SProxy(..))
@@ -219,7 +220,7 @@ handleAction = case _ of
   SelectLetter letter -> do
     next <- H.modify (maybeNewGame letter)
     case next of
-      Correct _ -> H.liftAff nextGame >>= H.put
+      Correct _ -> H.liftAff nextGame >>= H.put 
       _ -> H.put next
     H.raise $ Answered letter
 
@@ -241,40 +242,40 @@ maybeNewGame _ game = game
   
 randomQuiz :: Effect Quiz
 randomQuiz = do
-  let letterA = AN.singleton $ AN.head allLetters
+  let letterA = AN.singleton $ snd $ AN.head allLetters
   letters <- M.fromMaybe letterA <$> randomUniqElements 3 allLetters
   correct <- randomElement letters
   pure { correct, letters }
 
-allLetters :: NonEmptyArray Letter
+allLetters :: NonEmptyArray (Tuple Number Letter)
 allLetters = 
   let
-    a :: Letter
-    a = { character: 'A' , word: "Aff" , asset: Assets.aff }
+    a :: Tuple Number Letter
+    a = Tuple 1.0 { character: 'A', word: "Aff", asset: Assets.aff }
    in AN.cons' a $
-     [ { character: 'B', word: "Bär", asset: Assets.aff }
-     , { character: 'C', word: "Clown", asset: Assets.aff }
-     , { character: 'D', word: "Dame", asset: Assets.aff }
-     , { character: 'E', word: "Elch", asset: Assets.aff }
-     , { character: 'F', word: "Fuchs", asset: Assets.aff }
-     , { character: 'G', word: "Giraffe", asset: Assets.aff }
-     , { character: 'H', word: "Hund", asset: Assets.aff }
-     , { character: 'I', word: "Igel", asset: Assets.aff }
-     , { character: 'J', word: "Jäger", asset: Assets.aff }
-     , { character: 'K', word: "Karate", asset: Assets.aff }
-     , { character: 'L', word: "Lache", asset: Assets.aff }
-     , { character: 'M', word: "Mama", asset: Assets.aff }
-     , { character: 'N', word: "Nase", asset: Assets.aff }
-     , { character: 'O', word: "Ohr", asset: Assets.aff }
-     , { character: 'P', word: "Papa", asset: Assets.aff }
-     , { character: 'Q', word: "Quack", asset: Assets.aff }
-     , { character: 'R', word: "Raggete", asset: Assets.aff }
-     , { character: 'S', word: "Stern", asset: Assets.aff }
-     , { character: 'T', word: "Tanze", asset: Assets.aff }
-     , { character: 'U', word: "Uhu", asset: Assets.aff }
-     , { character: 'V', word: "Velo", asset: Assets.aff }
-     , { character: 'W', word: "Winter", asset: Assets.aff }
-     , { character: 'X', word: "Xylophone", asset: Assets.aff }
-     , { character: 'Y', word: "Yak", asset: Assets.aff }
-     , { character: 'Z', word: "Zug", asset: Assets.aff }
+     [ Tuple 1.0 { character: 'B', word: "Bär", asset: Assets.aff }
+     , Tuple 1.0 { character: 'C', word: "Clown", asset: Assets.aff }
+     , Tuple 1.0 { character: 'D', word: "Dame", asset: Assets.aff }
+     , Tuple 1.0 { character: 'E', word: "Elch", asset: Assets.aff }
+     , Tuple 1.0 { character: 'F', word: "Fuchs", asset: Assets.aff }
+     , Tuple 1.0 { character: 'G', word: "Giraffe", asset: Assets.aff }
+     , Tuple 1.0 { character: 'H', word: "Hund", asset: Assets.aff }
+     , Tuple 1.0 { character: 'I', word: "Igel", asset: Assets.aff }
+     , Tuple 1.0 { character: 'J', word: "Jäger", asset: Assets.aff }
+     , Tuple 1.0 { character: 'K', word: "Karate", asset: Assets.aff }
+     , Tuple 1.0 { character: 'L', word: "Lache", asset: Assets.aff }
+     , Tuple 1.0 { character: 'M', word: "Mama", asset: Assets.aff }
+     , Tuple 1.0 { character: 'N', word: "Nase", asset: Assets.aff }
+     , Tuple 1.0 { character: 'O', word: "Ohr", asset: Assets.aff }
+     , Tuple 1.0 { character: 'P', word: "Papa", asset: Assets.aff }
+     , Tuple 1.0 { character: 'Q', word: "Quack", asset: Assets.aff }
+     , Tuple 1.0 { character: 'R', word: "Raggete", asset: Assets.aff }
+     , Tuple 1.0 { character: 'S', word: "Stern", asset: Assets.aff }
+     , Tuple 1.0 { character: 'T', word: "Tanze", asset: Assets.aff }
+     , Tuple 1.0 { character: 'U', word: "Uhu", asset: Assets.aff }
+     , Tuple 1.0 { character: 'V', word: "Velo", asset: Assets.aff }
+     , Tuple 1.0 { character: 'W', word: "Winter", asset: Assets.aff }
+     , Tuple 1.0 { character: 'X', word: "Xylophone", asset: Assets.aff }
+     , Tuple 1.0 { character: 'Y', word: "Yak", asset: Assets.aff }
+     , Tuple 1.0 { character: 'Z', word: "Zug", asset: Assets.aff }
     ]
