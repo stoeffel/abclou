@@ -133,7 +133,7 @@ container =
   <<< A.cons (
     HH.h1 
     [ HC.style $ do
-        CSS.color color3
+        {-- CSS.color color3 --}
         CSS.fontSize $ CSS.em 4.0
         CSS.marginBottom CSS.nil
     ]

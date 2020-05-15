@@ -1,23 +1,30 @@
 html,body {
   height: 100%;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Patrick Hand', cursive;
   background-color: rgba(82, 75, 75, 0.1);
 }
 h1 {
   text-shadow:
-    -5px 5px 2px rgba(244,136,184,0.94),
-    -10px 10px 2px rgba(223,124,168,0.94),
-    -15px 15px 2px rgba(162,90,122,0.94);
+    0px 0px 2px white,
+    -2px 2px 2px rgba(244,136,184,0.94),
+    -7px 7px 2px rgba(223,124,168,0.94),
+    -12px 12px 2px rgba(162,90,122,0.94);
+  color: #290916;
 }
 
 
 .letter {
+  color: #290916;
   box-shadow: 0 8px 6px -6px black;
   border: none;
   transition: transform,box-shadow 0.5s ease;
   opacity: 1;
   transform: translate3d(0, -4px, 0);
+  font-family: 'Patrick Hand', cursive;
+  text-shadow: 
+    0px 0px 20px white,
+    0px 0px 2px white;
 }
 
 .letter.disabled {
@@ -27,7 +34,7 @@ h1 {
 }
 
 .letter:focus {
-  animation: pressing 0.1s cubic-bezier(.36,.07,.19,.97) both;
+  border: solid 2px rgba(131, 73, 99, 1.0);
 }
 .letter:hover {
   animation: pressing 0.1s cubic-bezier(.36,.07,.19,.97) both;
@@ -41,6 +48,8 @@ h1 {
   perspective: 1000px;
   box-shadow: 0 0px 6px -6px black;
 }
+
+.letter.wrong, .letter.disabled { text-shadow: none; }
 
 @keyframes pressing {
   0% {
