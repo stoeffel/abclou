@@ -273,17 +273,24 @@ nextGame letters = do
   Started First <$> H.liftEffect (randomQuiz letters)
 
 answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ game : Started attempt quiz }
-  | quiz.correct.character == answer.character = model { game = Correct answer }
+answeredCorrectly answer model@{ letters, game : Started attempt quiz }
+  | quiz.correct.character == answer.character =
+      model { game = Correct answer, letters = updateFrequency (-2.0) quiz.correct <$> letters }
   | otherwise = 
       model
-        { game = flip Started quiz $
+        { letters = updateFrequency 5.0 quiz.correct <$> letters
+        , game = flip Started quiz $
             case attempt of
               First -> Second answer
               Second firstAnswer -> Third firstAnswer answer
               a -> a
         }
 answeredCorrectly _ model = model
+
+updateFrequency :: Number -> Letter -> Letter -> Letter
+updateFrequency delta a b
+  | a == b = b { frequency = max 1.0 $ b.frequency + delta }
+  | otherwise = b
 
 -- TODO take allLetters as a argument and add them to the Model to allow changing the frequency
 randomQuiz :: NonEmptyArray Letter -> Effect Quiz
