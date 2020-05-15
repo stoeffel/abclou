@@ -1,6 +1,5 @@
 module Effect.Random.Extra
   ( randomUniqElements
-  , randomElement
   , randomWeighted
   ) where
 
@@ -31,12 +30,6 @@ randomUniqElements n xs = do
          rest <- randomUniqElements (n - 1) xs'
          pure $ AN.cons x <$> rest
       Nothing -> pure Nothing
-
-randomElement :: forall a. NonEmptyArray a -> Effect a
-randomElement xs = do
-  let fallback = AN.head xs
-  index <- randomInt 0 (AN.length xs)
-  pure $ fromMaybe fallback (xs !! index)
 
 randomWeighted :: forall a. NonEmptyArray (Tuple Number a) -> Effect a
 randomWeighted xs = do
