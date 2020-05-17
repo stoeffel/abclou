@@ -14,6 +14,7 @@ You can edit this file as you like.
   , "profunctor-lenses"
   , "psci-support"
   , "random"
+  , "test-unit"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
