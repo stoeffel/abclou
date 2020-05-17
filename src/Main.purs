@@ -8,6 +8,7 @@ import Letter (Letter)
 import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
+import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
 
@@ -231,11 +232,13 @@ handleAction = case _ of
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | Letter.sameCharacter quiz.correct answer =
-      model { game = Correct answer, letters = updateFrequency (-2.0) quiz.correct <$> letters }
+  | Letter.sameCharacter quiz.correct answer = model 
+      { game = Correct answer
+      , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
+      }
   | otherwise = 
       model
-        { letters = updateFrequency 5.0 quiz.correct <$> letters
+        { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
         , game = flip Started quiz $
             case attempt of
               First -> Second answer
@@ -243,11 +246,6 @@ answeredCorrectly answer model@{ letters, game : Started attempt quiz }
               a -> a
         }
 answeredCorrectly _ model = model
-
-updateFrequency :: Number -> Letter -> Letter -> Letter
-updateFrequency delta a b
-  | a == b = Letter.adjustFrequency delta b
-  | otherwise = b
 
 newGame :: NonEmptyArray Letter -> Effect Game
 newGame letters = Started First <$> Letter.random letters
