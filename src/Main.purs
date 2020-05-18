@@ -22,7 +22,16 @@ import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource as ES
 import Halogen.VDom.Driver (runUI)
+
+import Web.Event.Event as E
+import Web.HTML (window) as Web
+import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML.Window (document) as Web
+import Web.UIEvent.KeyboardEvent (KeyboardEvent)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.KeyboardEvent.EventTypes as KET
 
 import CSS as CSS
 import CSS.Common (center) as CSS
@@ -30,6 +39,7 @@ import CSS.Flexbox as FB
 
 import Effect (Effect)
 import Effect.Aff (Aff, delay)
+import Effect.Console (log)
 
 
 main :: Effect Unit
@@ -41,6 +51,7 @@ main = HA.runHalogenAff do
 data Action
   = Initialize
   | SelectLetter Letter
+  | HandleKey H.SubscriptionId KeyboardEvent
 
 type Model = 
   { game :: Game
@@ -223,19 +234,35 @@ handleAction = case _ of
     sounds <- H.liftAff Sounds.load
     game <- H.liftEffect (newGame Nothing letters)
     H.modify_ _ { game = game, sounds = sounds }
-  SelectLetter letter -> do
-    {game, letters, sounds} <- H.modify (answeredCorrectly letter)
-    case game of
-      Correct answer -> do
-         H.liftEffect $ Sounds.play sounds.tada
-         finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 1500.0)
-         H.modify_ _ { game = finally }
-      _ -> H.liftEffect $ Sounds.play sounds.nope
+    document <- H.liftEffect $ Web.document =<< Web.window
+    H.subscribe' \sid ->
+      ES.eventListenerEventSource
+        KET.keyup
+        (HTMLDocument.toEventTarget document)
+        (map (HandleKey sid) <<< KE.fromEvent)
+  HandleKey id ev -> do
+     {letters} <- H.get 
+     case Letter.find (KE.key ev) letters of
+       Just letter -> do
+         H.liftEffect $ log $ Letter.word letter
+         handleSelectLetter letter
+       Nothing -> pure unit
+  SelectLetter letter -> handleSelectLetter letter
+
+handleSelectLetter :: forall c m. Letter -> H.HalogenM Model Action c m Aff Unit
+handleSelectLetter letter = do
+  {game, letters, sounds} <- H.modify (answeredCorrectly letter)
+  case game of
+    Correct answer -> do
+        H.liftEffect $ Sounds.play sounds.tada
+        finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 1500.0)
+        H.modify_ _ { game = finally }
+    _ -> H.liftEffect $ Sounds.play sounds.nope
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | quiz.correct == answer = model 
-      { game = Correct answer
+  | Letter.sameLetter quiz.correct answer = model 
+      { game = Correct quiz.correct
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }
   | otherwise = 

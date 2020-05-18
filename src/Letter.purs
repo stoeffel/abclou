@@ -6,6 +6,8 @@ module Letter
   , asset
   , adjustFrequency
   , random
+  , find
+  , sameLetter
   )
   where
 
@@ -15,7 +17,9 @@ import Assets as Assets
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
+import Data.Foldable as F
 import Data.Maybe as M
+import Data.Maybe (Maybe(..))
 import Data.String as S
 import Data.String.NonEmpty as SN
 import Data.String.NonEmpty.CodeUnits as SNC
@@ -56,6 +60,12 @@ random x = do
 
 withFrequency :: Letter -> Tuple Number Letter
 withFrequency x@(Letter {frequency}) = Tuple frequency x
+
+find :: String -> NonEmptyArray Letter -> Maybe Letter
+find str = F.find ((_ == S.toUpper str) <<< character)
+
+sameLetter :: Letter -> Letter -> Boolean
+sameLetter a b = character a == character b
 
 all :: NonEmptyArray Letter
 all = AN.cons' 
