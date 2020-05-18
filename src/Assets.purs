@@ -2,6 +2,8 @@ module Assets
   ( for
   , Asset
   , aff
+  , tada
+  , nope
   ) where
 
 import Prelude
@@ -18,3 +20,9 @@ for (Asset name) = forAsset name
 
 aff :: Asset
 aff = Asset "aff"
+
+tada :: Asset
+tada = Asset "tada"
+
+nope :: Asset
+nope = Asset "nope"

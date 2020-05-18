@@ -4,12 +4,14 @@ import Prelude
 
 import Letter as Letter
 import Letter (Letter)
+import Sounds as Sounds
+import Sounds (Sounds)
 
 import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Time.Duration (Milliseconds(..))
 
 import Halogen as H
@@ -36,12 +38,12 @@ main = HA.runHalogenAff do
 
 data Action
   = Initialize
-  | InitializeCorrectForDebugging
   | SelectLetter Letter
 
 type Model = 
   { game :: Game
   , letters :: NonEmptyArray Letter
+  , sounds :: Sounds
   }
 
 data Game 
@@ -88,7 +90,7 @@ component =
     }
 
 initialState :: forall i. i -> Model
-initialState _ = { game: NotStarted, letters: Letter.all }
+initialState _ = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
 
 
 type View c m = H.ComponentHTML Action c m
@@ -216,23 +218,21 @@ handleAction ::  forall c m. Action -> H.HalogenM Model Action c m Aff Unit
 handleAction = case _ of
   Initialize -> do
     {letters} <- H.get
+    sounds <- H.liftAff Sounds.load
     game <- H.liftEffect (newGame letters)
-    H.modify_ _ { game = game }
-  InitializeCorrectForDebugging -> do
-    {letters} <- H.get
-    let a = AN.head letters
-    H.modify_ _ { game = Correct a }
+    H.modify_ _ { game = game, sounds = sounds }
   SelectLetter letter -> do
-    {game, letters} <- H.modify (answeredCorrectly letter)
+    {game, letters, sounds} <- H.modify (answeredCorrectly letter)
     case game of
       Correct _ -> do
+         H.liftEffect $ Sounds.play sounds.tada
          finally <- H.liftAff $ H.liftEffect (newGame letters) <* delay (Milliseconds 1500.0)
          H.modify_ _ { game = finally }
-      _ -> pure unit
+      _ -> H.liftEffect $ Sounds.play sounds.nope
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | Letter.sameCharacter quiz.correct answer = model 
+  | quiz.correct == answer = model 
       { game = Correct answer
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }

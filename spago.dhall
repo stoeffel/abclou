@@ -4,9 +4,11 @@ You can edit this file as you like.
 -}
 { name = "my-project"
 , dependencies =
-  [ "console"
+  [ "affjax"
+  , "console"
   , "css"
   , "effect"
+  , "exceptions"
   , "foldable-traversable"
   , "halogen"
   , "halogen-css"
@@ -15,6 +17,7 @@ You can edit this file as you like.
   , "psci-support"
   , "random"
   , "test-unit"
+  , "webaudio"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

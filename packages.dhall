@@ -123,6 +123,30 @@ let upstream =
 
 let overrides = {=}
 
-let additions = {=}
+let additions =
+      { webaudio =
+          { dependencies =
+            [ "aff"
+            , "affjax"
+            , "arraybuffer"
+            , "arraybuffer-types"
+            , "arrays"
+            , "assert"
+            , "console"
+            , "effect"
+            , "foldable-traversable"
+            , "js-timers"
+            , "lists"
+            , "math"
+            , "maybe"
+            , "psci-support"
+            , "refs"
+            , "strings"
+            , "tuples"
+            ]
+          , repo = "https://github.com/adkelley/purescript-webaudio.git"
+          , version = "v0.2.1"
+          }
+      }
 
 in  upstream ⫽ overrides ⫽ additions

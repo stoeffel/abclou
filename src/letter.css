@@ -38,8 +38,8 @@ h1 {
 }
 .letter.wrong {
   animation: 
-    opaque 1.22s ease both,
-    shake 1.22s cubic-bezier(.36,.07,.19,.97) both;
+    opaque 0.62s ease both,
+    shake 0.62s cubic-bezier(.36,.07,.19,.97) both;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;

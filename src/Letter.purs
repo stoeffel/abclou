@@ -4,9 +4,9 @@ module Letter
   , character
   , word
   , asset
-  , sameCharacter
   , adjustFrequency
   , random
+  , a
   )
   where
 
@@ -44,13 +44,11 @@ word (Letter {word}) = SN.toString word
 asset :: Letter -> String
 asset (Letter {asset}) = Assets.for asset
 
-sameCharacter :: Letter -> Letter -> Boolean
-sameCharacter (Letter {word: a}) (Letter {word: b}) = a == b
-
 adjustFrequency :: Number -> Letter -> Letter
 adjustFrequency delta (Letter a) =
   Letter a { frequency = clamp 1.0 5.0 $ a.frequency + delta }
 
+-- TODO not two in a row
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
 random x = do
   letters <- M.fromMaybe (AN.singleton a)

@@ -1,4 +1,5 @@
 var assets = require('./assets/*.png');
+var sounds = require('./assets/*.wav');
 var css = require('./src/*.css');
 var Main = require('./output/Main');
 
@@ -19,8 +20,7 @@ function main () {
     You will probably want to make it a function from String -> Effect ()
   */
 
-  console.log("starting")
-  window.assets = assets;
+  window.assets = Object.assign(assets, sounds);
   Main.main();
 }
 
