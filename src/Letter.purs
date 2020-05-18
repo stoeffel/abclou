@@ -6,7 +6,6 @@ module Letter
   , asset
   , adjustFrequency
   , random
-  , a
   )
   where
 
