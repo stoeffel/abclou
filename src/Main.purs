@@ -14,6 +14,8 @@ import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Time.Duration (Milliseconds(..))
 
+import Control.Monad.Loops (iterateUntil)
+
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
@@ -219,14 +221,14 @@ handleAction = case _ of
   Initialize -> do
     {letters} <- H.get
     sounds <- H.liftAff Sounds.load
-    game <- H.liftEffect (newGame letters)
+    game <- H.liftEffect (newGame Nothing letters)
     H.modify_ _ { game = game, sounds = sounds }
   SelectLetter letter -> do
     {game, letters, sounds} <- H.modify (answeredCorrectly letter)
     case game of
-      Correct _ -> do
+      Correct answer -> do
          H.liftEffect $ Sounds.play sounds.tada
-         finally <- H.liftAff $ H.liftEffect (newGame letters) <* delay (Milliseconds 1500.0)
+         finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 1500.0)
          H.modify_ _ { game = finally }
       _ -> H.liftEffect $ Sounds.play sounds.nope
 
@@ -247,5 +249,8 @@ answeredCorrectly answer model@{ letters, game : Started attempt quiz }
         }
 answeredCorrectly _ model = model
 
-newGame :: NonEmptyArray Letter -> Effect Game
-newGame letters = Started First <$> Letter.random letters
+newGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
+newGame lastAnswer letters = 
+  Started First 
+  <$> iterateUntil ((/=) lastAnswer <<< Just <<< _.correct)
+  (Letter.random letters)

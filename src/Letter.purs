@@ -47,7 +47,6 @@ adjustFrequency :: Number -> Letter -> Letter
 adjustFrequency delta (Letter a) =
   Letter a { frequency = clamp 1.0 5.0 $ a.frequency + delta }
 
--- TODO not two in a row
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
 random x = do
   letters <- M.fromMaybe (AN.singleton a)

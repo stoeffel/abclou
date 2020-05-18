@@ -13,6 +13,7 @@ You can edit this file as you like.
   , "halogen"
   , "halogen-css"
   , "halogen-vdom"
+  , "monad-loops"
   , "profunctor-lenses"
   , "psci-support"
   , "random"
