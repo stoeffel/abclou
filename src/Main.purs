@@ -218,10 +218,6 @@ viewLetter attempt letter =
         CSS.maxHeight $ CSS.px 150.0
         CSS.maxWidth $ CSS.px 150.0
         CSS.width $ CSS.pct 80.0
-        case state of
-          Disabled -> CSS.backgroundColor color2
-          Enabled -> CSS.backgroundColor color1
-          Wrong -> CSS.backgroundColor color2
     , HE.onClick \_ -> Just (SelectLetter letter)
     ]
     [ HH.text (Letter.character letter) ]

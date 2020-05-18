@@ -6,16 +6,17 @@ html,body {
 }
 h1 {
   text-shadow: 0px 0px 2px white;
-  color: rgba(244,136,184,0.94);
+  color: #AD4AFF;
   opacity: 0.5;
 }
 
 
 .letter {
   color: #290916;
+  background-color: #3AC8E8;
   box-shadow: 0 8px 6px -6px black;
   border: none;
-  transition: transform,box-shadow 0.5s ease;
+  transition: background-color, transform, box-shadow 0.5s ease;
   opacity: 1;
   transform: translate3d(0, -4px, 0);
   font-family: 'Patrick Hand', cursive;
@@ -25,25 +26,26 @@ h1 {
 }
 
 .letter.disabled {
-  opacity: 0.4;
+  background-color: #EBBA50;
   box-shadow: 0 0px 6px -6px black;
   transform: translate3d(0, 0, 0);
+  transition: background-color 0.5s ease;
 }
 
-.letter:focus {
+.letter.enabled:focus {
   border: solid 2px rgba(131, 73, 99, 1.0);
 }
-.letter:hover {
+.letter.enabled:hover {
   animation: pressing 0.1s cubic-bezier(.36,.07,.19,.97) both;
 }
 .letter.wrong {
-  animation: 
-    opaque 0.62s ease both,
-    shake 0.62s cubic-bezier(.36,.07,.19,.97) both;
+  animation: shake 0.62s cubic-bezier(.36,.07,.19,.97) both;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   perspective: 1000px;
   box-shadow: 0 0px 6px -6px black;
+  background-color: #FF7A7F;
+  transition: background-color 0.5s ease;
 }
 
 .letter.wrong, .letter.disabled { text-shadow: none; }
@@ -56,15 +58,6 @@ h1 {
   100% {
     box-shadow: 0 2px 6px -6px black;
     transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes opaque {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.4;
   }
 }
 
