@@ -87,11 +87,11 @@ instance letterStateShow :: Show LetterState where
 attemptToState :: Attempts -> Letter -> LetterState
 attemptToState First _ = Enabled
 attemptToState (Second a) b
-  | a == b = Wrong
+  | Letter.sameLetter a b = Wrong
   | otherwise = Enabled
 attemptToState (Third a b) c
-  | a == c = Disabled
-  | b == c = Wrong
+  | Letter.sameLetter a c = Disabled
+  | Letter.sameLetter b c = Wrong
   | otherwise = Enabled
 
 component :: forall q i m . H.Component HH.HTML q i m Aff
