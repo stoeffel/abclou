@@ -130,7 +130,7 @@ render { game: TryAgain _ _ } = container [HH.text "Try again"]
 container :: forall c m. Array (View c m) -> View c m
 container = 
   HH.div 
-  [ HC.style $ do
+  [ HC.style do
       CSS.display CSS.flex 
       CSS.alignItems CSS.center 
       CSS.flexDirection CSS.column
@@ -138,8 +138,7 @@ container =
   ]
   <<< A.cons (
     HH.h1 
-    [ HC.style $ do
-        {-- CSS.color color3 --}
+    [ HC.style do
         CSS.fontSize $ CSS.em 4.0
         CSS.marginBottom CSS.nil
     ]
@@ -149,7 +148,7 @@ container =
 viewQuiz :: forall c m. Attempts -> Quiz -> View c m
 viewQuiz attempt quiz =
   HH.div 
-    [ HC.style $ do
+    [ HC.style do
         CSS.alignItems CSS.stretch 
         CSS.display CSS.flex 
         CSS.flexDirection CSS.column
@@ -163,14 +162,14 @@ viewQuiz attempt quiz =
 viewCorrect :: forall c m. Letter -> View c m
 viewCorrect letter =
   HH.div 
-    [ HC.style $ do
+    [ HC.style do
         CSS.alignItems CSS.center 
         CSS.display CSS.flex 
         CSS.flexDirection CSS.column
         CSS.justifyContent CSS.spaceBetween 
     ]
     [ HH.div
-        [ HC.style $ do
+        [ HC.style do
             CSS.alignItems CSS.center 
             CSS.justifyContent CSS.center 
             CSS.display CSS.flex 
@@ -178,16 +177,12 @@ viewCorrect letter =
         ]
         [ viewWordImage letter
         , HH.img 
-          [ HP.classes 
-            [ HH.ClassName "correct-star" ]
-          , HC.style do
-              CSS.position CSS.absolute
-              CSS.zIndex (-1)
+          [ HP.class_ $ HH.ClassName "correct-star"
           , HP.src $ Assets.for Assets.star 
           ]
         ]
     , HH.h2 
-        [ HC.style $ do
+        [ HC.style do
             CSS.fontSize $ CSS.em 4.0
         ]
         [ HH.text $ Letter.word letter ]
@@ -195,7 +190,7 @@ viewCorrect letter =
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
 viewLetters attempt letters =
   HH.ul
-    [ HC.style $ do
+    [ HC.style do
         CSS.alignItems CSS.stretch
         CSS.display CSS.flex 
         CSS.justifyContent CSS.spaceBetween
@@ -211,7 +206,7 @@ viewWordImage letter =
     [ HP.alt $ Letter.word letter
     , HP.title $ Letter.word letter
     , HP.src $ Letter.asset letter
-    , HC.style $ do
+    , HC.style do
         CSS.height $ CSS.px 400.0
         CSS.width $ CSS.px 400.0
     ]
@@ -227,14 +222,6 @@ viewLetter attempt letter =
         [ HH.ClassName "letter"
         , HH.ClassName (show state)
         ]
-    , HC.style $ do
-        CSS.borderRadius (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) (CSS.px 15.0) 
-        CSS.fontSize $ CSS.em 6.0
-        CSS.height $ CSS.pct 80.0
-        CSS.margin (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0) (CSS.px 5.0)
-        CSS.maxHeight $ CSS.px 150.0
-        CSS.maxWidth $ CSS.px 150.0
-        CSS.width $ CSS.pct 80.0
     , HE.onClick \_ -> Just (SelectLetter letter)
     ]
     [ HH.text (Letter.character letter) ]
