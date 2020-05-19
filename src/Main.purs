@@ -14,6 +14,7 @@ import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (Tuple(Tuple))
 
 import Control.Monad.Loops (iterateUntil)
 
@@ -21,6 +22,7 @@ import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.CSS as HC
+import Halogen.HTML.Elements.Keyed as HK
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource as ES
@@ -182,14 +184,15 @@ viewCorrect letter =
           ]
         ]
     , HH.h2 
-        [ HC.style do
-            CSS.fontSize $ CSS.em 4.0
-        ]
-        [ HH.text $ Letter.word letter ]
+      [ HC.style do
+          CSS.fontSize $ CSS.em 4.0
+      ]
+      [ HH.text $ Letter.word letter ]
     ]
+
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
 viewLetters attempt letters =
-  HH.ul
+  HK.ul
     [ HC.style do
         CSS.alignItems CSS.stretch
         CSS.display CSS.flex 
@@ -211,9 +214,10 @@ viewWordImage letter =
         CSS.width $ CSS.px 400.0
     ]
 
-viewLetter :: forall c m. Attempts -> Letter -> View c m
+viewLetter :: forall c m. Attempts -> Letter -> Tuple String (View c m)
 viewLetter attempt letter =
   let state = attemptToState attempt letter in
+  Tuple (Letter.character letter) $
   HH.button
     [ HP.title (Letter.character letter)
     , HP.enabled (state == Enabled)
@@ -255,7 +259,9 @@ handleSelectLetter letter = do
   case game of
     Correct answer -> do
         H.liftEffect $ Sounds.play sounds.tada
-        finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 2500.0)
+        finally <- H.liftAff do
+          delay (Milliseconds 10000.0)
+          H.liftEffect (newGame (Just answer) letters) 
         H.modify_ _ { game = finally }
     _ -> H.liftEffect $ Sounds.play sounds.nope
 
