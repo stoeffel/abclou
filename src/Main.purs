@@ -2,6 +2,7 @@ module Main where
 
 import Prelude
 
+import Assets as Assets
 import Letter as Letter
 import Letter (Letter)
 import Sounds as Sounds
@@ -168,7 +169,23 @@ viewCorrect letter =
         CSS.flexDirection CSS.column
         CSS.justifyContent CSS.spaceBetween 
     ]
-    [ viewWordImage letter
+    [ HH.div
+        [ HC.style $ do
+            CSS.alignItems CSS.center 
+            CSS.justifyContent CSS.center 
+            CSS.display CSS.flex 
+            CSS.flexDirection CSS.column
+        ]
+        [ viewWordImage letter
+        , HH.img 
+          [ HP.classes 
+            [ HH.ClassName "correct-star" ]
+          , HC.style do
+              CSS.position CSS.absolute
+              CSS.zIndex (-1)
+          , HP.src $ Assets.for Assets.star 
+          ]
+        ]
     , HH.h2 
         [ HC.style $ do
             CSS.fontSize $ CSS.em 4.0
@@ -251,7 +268,7 @@ handleSelectLetter letter = do
   case game of
     Correct answer -> do
         H.liftEffect $ Sounds.play sounds.tada
-        finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 1500.0)
+        finally <- H.liftAff $ H.liftEffect (newGame (Just answer) letters) <* delay (Milliseconds 2500.0)
         H.modify_ _ { game = finally }
     _ -> H.liftEffect $ Sounds.play sounds.nope
 

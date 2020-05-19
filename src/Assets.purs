@@ -4,6 +4,7 @@ module Assets
   , aff
   , tada
   , nope
+  , star
   ) where
 
 import Prelude
@@ -26,3 +27,6 @@ tada = Asset "tada"
 
 nope :: Asset
 nope = Asset "nope"
+
+star :: Asset
+star = Asset "star"

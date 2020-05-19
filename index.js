@@ -1,6 +1,6 @@
 var assets = require('./assets/*.png');
 var sounds = require('./assets/*.wav');
-var css = require('./src/*.css');
+var less = require('./src/main.less');
 var Main = require('./output/Main');
 
 function main () {
