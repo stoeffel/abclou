@@ -6,12 +6,10 @@ You can edit this file as you like.
 , dependencies =
   [ "affjax"
   , "console"
-  , "css"
   , "effect"
   , "exceptions"
   , "foldable-traversable"
   , "halogen"
-  , "halogen-css"
   , "halogen-vdom"
   , "monad-loops"
   , "profunctor-lenses"

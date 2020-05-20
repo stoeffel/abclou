@@ -21,7 +21,6 @@ import Control.Monad.Loops (iterateUntil)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
-import Halogen.HTML.CSS as HC
 import Halogen.HTML.Elements.Keyed as HK
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
@@ -35,10 +34,6 @@ import Web.HTML.Window (document) as Web
 import Web.UIEvent.KeyboardEvent (KeyboardEvent)
 import Web.UIEvent.KeyboardEvent as KE
 import Web.UIEvent.KeyboardEvent.EventTypes as KET
-
-import CSS as CSS
-import CSS.Common (center) as CSS
-import CSS.Flexbox as FB
 
 import Effect (Effect)
 import Effect.Aff (Aff, Fiber)
@@ -115,18 +110,6 @@ initialState _ = { game: NotStarted, letters: Letter.all, sounds: Sounds.def, fi
 
 type View c m = H.ComponentHTML Action c m
 
-color1 :: CSS.Color
-color1 = CSS.rgba 223 124 168 0.94
-
-color2 :: CSS.Color
-color2 = CSS.rgba 162 90 122 0.94
-
-color3 :: CSS.Color
-color3 = CSS.rgba 131 73 99 1.0
-
-color4 :: CSS.Color
-color4 = CSS.rgba 112 77 78 1.0
-
 render :: forall c m. Model -> View c m
 render { game: NotStarted } = container [HH.text "Ein Moment..."]
 render { game: Started attempt quiz } = container [viewQuiz attempt quiz]
@@ -135,32 +118,12 @@ render { game: TryAgain _ _ } = container [HH.text "Try again"]
 
 container :: forall c m. Array (View c m) -> View c m
 container = 
-  HH.div 
-  [ HC.style do
-      CSS.display CSS.flex 
-      CSS.alignItems CSS.center 
-      CSS.flexDirection CSS.column
-      CSS.height $ CSS.pct 100.0
-  ]
-  <<< A.cons (
-    HH.h1 
-    [ HC.style do
-        CSS.fontSize $ CSS.em 4.0
-        CSS.marginBottom CSS.nil
-    ]
-    [ HH.text "ABC LOU" ]
-  )
+  HH.div [ HP.class_ $ HH.ClassName "container" ]
+  <<< A.cons (HH.h1 [] [ HH.text "ABC LOU" ])
 
 viewQuiz :: forall c m. Attempts -> Quiz -> View c m
 viewQuiz attempt quiz =
-  HH.div 
-    [ HC.style do
-        CSS.alignItems CSS.stretch 
-        CSS.display CSS.flex 
-        CSS.flexDirection CSS.column
-        CSS.justifyContent CSS.spaceBetween 
-        FB.flex 2 0 CSS.nil
-    ]
+  HH.div [ HP.class_ $ HH.ClassName "quiz" ]
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
@@ -169,43 +132,22 @@ viewCorrect :: forall c m. Letter -> View c m
 viewCorrect letter =
   HH.a 
     [ HE.onClick \_ -> Just Continue 
-    , HC.style do
-        CSS.alignItems CSS.center 
-        CSS.display CSS.flex 
-        CSS.flexDirection CSS.column
-        CSS.justifyContent CSS.spaceBetween 
+    , HP.class_ $ HH.ClassName "correct"
     ]
     [ HH.div
-        [ HC.style do
-            CSS.alignItems CSS.center 
-            CSS.justifyContent CSS.center 
-            CSS.display CSS.flex 
-            CSS.flexDirection CSS.column
-        ]
+        [ HP.class_ $ HH.ClassName "image-container" ]
         [ viewWordImage letter
         , HH.img 
           [ HP.class_ $ HH.ClassName "correct-star"
           , HP.src $ Assets.for Assets.star 
           ]
         ]
-    , HH.h2 
-        [ HC.style do
-            CSS.fontSize $ CSS.em 4.0
-        ]
-        [ HH.text $ Letter.word letter ]
+    , HH.h2 [] [ HH.text $ Letter.word letter ]
     ]
 
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
 viewLetters attempt letters =
-  HK.ul
-    [ HC.style do
-        CSS.alignItems CSS.stretch
-        CSS.display CSS.flex 
-        CSS.justifyContent CSS.spaceBetween
-        CSS.margin ( CSS.em 1.2 ) CSS.nil CSS.nil CSS.nil
-        CSS.padding CSS.nil CSS.nil CSS.nil CSS.nil
-        FB.flex 2 0 CSS.nil
-    ]
+  HK.ul [ HP.class_ $ HH.ClassName "letters" ]
     $ AN.toArray $ viewLetter attempt <$> letters
 
 viewWordImage :: forall c m. Letter -> View c m
@@ -214,9 +156,8 @@ viewWordImage letter =
     [ HP.alt $ Letter.word letter
     , HP.title $ Letter.word letter
     , HP.src $ Letter.asset letter
-    , HC.style do
-        CSS.height $ CSS.px 400.0
-        CSS.width $ CSS.px 400.0
+    , HP.height 400
+    , HP.width 400
     ]
 
 viewLetter :: forall c m. Attempts -> Letter -> Tuple String (View c m)
