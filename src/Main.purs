@@ -41,8 +41,10 @@ import CSS.Common (center) as CSS
 import CSS.Flexbox as FB
 
 import Effect (Effect)
-import Effect.Aff (Aff, delay)
+import Effect.Aff (Aff, Fiber)
+import Effect.Aff as Aff
 import Effect.Console (log)
+import Effect.Exception (error)
 
 
 main :: Effect Unit
@@ -54,12 +56,14 @@ main = HA.runHalogenAff do
 data Action
   = Initialize
   | SelectLetter Letter
+  | Continue
   | HandleKey H.SubscriptionId KeyboardEvent
 
 type Model = 
   { game :: Game
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
+  , fiber :: Maybe (Fiber Game)
   }
 
 data Game 
@@ -106,7 +110,7 @@ component =
     }
 
 initialState :: forall i. i -> Model
-initialState _ = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
+initialState _ = { game: NotStarted, letters: Letter.all, sounds: Sounds.def, fiber: Nothing }
 
 
 type View c m = H.ComponentHTML Action c m
@@ -163,8 +167,9 @@ viewQuiz attempt quiz =
 
 viewCorrect :: forall c m. Letter -> View c m
 viewCorrect letter =
-  HH.div 
-    [ HC.style do
+  HH.a 
+    [ HE.onClick \_ -> Just Continue 
+    , HC.style do
         CSS.alignItems CSS.center 
         CSS.display CSS.flex 
         CSS.flexDirection CSS.column
@@ -184,10 +189,10 @@ viewCorrect letter =
           ]
         ]
     , HH.h2 
-      [ HC.style do
-          CSS.fontSize $ CSS.em 4.0
-      ]
-      [ HH.text $ Letter.word letter ]
+        [ HC.style do
+            CSS.fontSize $ CSS.em 4.0
+        ]
+        [ HH.text $ Letter.word letter ]
     ]
 
 viewLetters :: forall c m. Attempts -> NonEmptyArray Letter -> View c m
@@ -252,6 +257,16 @@ handleAction = case _ of
          handleSelectLetter letter
        Nothing -> pure unit
   SelectLetter letter -> handleSelectLetter letter
+  Continue -> do
+    model <- H.get
+    case model.game of
+      Correct answer -> do
+        H.liftAff $ case model.fiber of
+          Nothing -> pure unit
+          Just fiber -> Aff.killFiber (error "cancelled") fiber
+        game <- H.liftEffect (newGame (Just answer) model.letters)
+        H.put model { game = game }
+      _ -> pure unit
 
 handleSelectLetter :: forall c m. Letter -> H.HalogenM Model Action c m Aff Unit
 handleSelectLetter letter = do
@@ -259,9 +274,12 @@ handleSelectLetter letter = do
   case game of
     Correct answer -> do
         H.liftEffect $ Sounds.play sounds.tada
-        finally <- H.liftAff do
-          delay (Milliseconds 10000.0)
-          H.liftEffect (newGame (Just answer) letters) 
+        fiber <- H.liftAff $ Aff.forkAff (
+            Aff.delay (Milliseconds 10000.0)
+            *> H.liftEffect (newGame (Just answer) letters) 
+          )
+        H.modify_ _ { fiber = Just fiber }
+        finally <- H.liftAff $ Aff.joinFiber fiber
         H.modify_ _ { game = finally }
     _ -> H.liftEffect $ Sounds.play sounds.nope
 
