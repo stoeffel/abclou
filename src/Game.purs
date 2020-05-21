@@ -127,15 +127,17 @@ main =
 
 render :: forall a. Model -> Widget HTML a
 render model = do
-    action <- view model
-    next <- case action of
-      SelectLetter letter -> 
-        pure $ answeredCorrectly letter model
-      NextGame letter -> do
-         next <- liftEffect $ newGame (Just letter) model.letters 
-         pure model { game = next }
-      _ -> pure model
-    render next
+  action <- view model
+  render =<< liftEffect (update action model)
+
+update :: Action -> Model -> Effect Model
+update action model = case action of
+  SelectLetter letter -> 
+    pure $ answeredCorrectly letter model
+  NextGame letter -> do
+      next <- newGame (Just letter) model.letters 
+      pure model { game = next }
+  _ -> pure model
 
 view :: Model -> Widget HTML Action
 view model@{ game: NotStarted } = container [D.text "Ein Moment..."] 
