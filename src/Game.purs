@@ -146,7 +146,7 @@ viewCorrect letter sounds = do
   pure $ NextGame $ Just letter
   where
     delayed :: Aff Unit
-    delayed = Aff.delay (Milliseconds 10000000000.0)
+    delayed = Aff.delay (Milliseconds 10000.0)
 
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
