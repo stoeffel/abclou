@@ -3,6 +3,7 @@ module Game where
 import Prelude
 
 import Assets as Assets
+import Keyboard as Keyboard
 import Letter as Letter
 import Letter (Letter)
 import Sounds as Sounds
@@ -14,7 +15,6 @@ import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
-import Data.Tuple (Tuple(Tuple))
 
 import Concur.Core.DevTools as CD
 import Concur.Core (Widget)
@@ -23,36 +23,28 @@ import Concur.React.DOM as D
 import Concur.React.Props as P
 import Concur.React.Run (runWidgetInDom)
 
+import React.SyntheticEvent as R
+
 import Control.Alt ((<|>))
 import Control.Monad.Loops (iterateUntil)
 
-import Web.HTML (window) as Web
-import Web.HTML.HTMLDocument as HTMLDocument
-import Web.HTML.Window (document) as Web
-import Web.UIEvent.KeyboardEvent (KeyboardEvent)
-import Web.UIEvent.KeyboardEvent as KE
-import Web.UIEvent.KeyboardEvent.EventTypes as KET
-
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Aff (Aff, Fiber)
 import Effect.Aff.Class (liftAff)
+import Effect.Aff (Aff)
 import Effect.Aff as Aff
-import Effect.Console (log)
-import Effect.Exception (error)
 
 
 data Action
   = Loaded Sounds
   | SelectLetter Letter
   | NextGame (Maybe Letter)
-  {-- | HandleKey H.SubscriptionId KeyboardEvent --}
+  | NoOp
 
 type Model = 
   { game :: Game
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
-  , fiber :: Maybe (Fiber Game)
   }
 
 data Game 
@@ -92,7 +84,7 @@ attemptToState (Third a b) c
   | otherwise = Enabled
 
 initialState :: Model
-initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def, fiber: Nothing }
+initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, game : Started attempt quiz }
@@ -137,6 +129,7 @@ update action model = case action of
   NextGame letter -> do
       next <- newGame letter model.letters 
       pure model { game = next }
+  NoOp -> pure model
 
 view :: Model -> Widget HTML Action
 view model@{ game: NotStarted } = container [ viewLoading ] 
@@ -148,10 +141,15 @@ container = D.div [ P.className "container" ] <<< A.cons (D.h1 [] [ D.text "ABC 
 
 viewLoading :: Widget HTML Action
 viewLoading =
-  (Loaded <$> liftAff Sounds.load) <|> D.text "..."
+  liftAff load <|> D.text "..."
+  where
+    load = do
+      sounds <- Sounds.load
+      liftEffect $ Keyboard.startListening
+      pure (Loaded sounds)
 
 viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
-viewQuiz attempt quiz sounds = do
+viewQuiz attempt quiz sounds = liftAff onLetterPress <|> do
   if attempt /= First then
     liftEffect $ Sounds.play sounds.nope
   else pure unit
@@ -159,9 +157,17 @@ viewQuiz attempt quiz sounds = do
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
+  where
+    onLetterPress :: Aff Action
+    onLetterPress = do
+      ev <- Keyboard.awaitKey
+      key <- liftEffect $ R.key ev
+      case Letter.find key quiz.letters of
+        Just letter -> pure $ SelectLetter letter
+        Nothing -> pure NoOp
 
 viewCorrect :: Letter -> Sounds -> Widget HTML Action
-viewCorrect letter sounds = do
+viewCorrect letter sounds = liftAff onLetterPress <|> do
   liftEffect $ Sounds.play sounds.tada
   liftAff (NextGame (Just letter) <$ Aff.delay (Milliseconds 10000.0))
     <|> D.a 
@@ -178,6 +184,15 @@ viewCorrect letter sounds = do
           ]
       , D.h2 [] [ D.text $ Letter.word letter ]
       ]
+  where
+    onLetterPress :: Aff Action
+    onLetterPress = do
+      ev <- Keyboard.awaitKey
+      key <- liftEffect $ R.key ev
+      if key == " " then
+        pure $ NextGame $ Just letter
+      else
+        pure NoOp
 
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
