@@ -1,13 +1,12 @@
 module Test.Main where
 
-import Prelude
+{-- import Game --}
 
-import Main
+import Data.Unit (Unit)
 
 import Effect (Effect)
-import Effect.Class.Console (log)
 
-import Test.Unit (suite, test, timeout)
+import Test.Unit (suite, test)
 import Test.Unit.Main (runTest)
 import Test.Unit.Assert as Assert
 
