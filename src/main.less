@@ -21,8 +21,8 @@ html,body,#app {
 h1 {
   color: @color1;
   font-size: 4em;
-  margin-bottom: 0;
-  margin-top: 10px;
+  margin-bottom: 0px;
+  margin-top: 0px;
   opacity: 0.5;
   text-shadow: 0px 0px 2px white;
 }
@@ -48,11 +48,27 @@ h2 {
 }
 
 .image-container {
-  position: relative;
-  align-items: center;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: stretch;
+  max-width: 100%;
+  flex: 2;
+
+  a {
+    margin: none;
+    padding: none;
+  }
+
+  .correct-word {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      text-align: center;
+    }
+  }
 }
 
 .word-image {
@@ -62,12 +78,8 @@ h2 {
 
 .correct-star {
   animation: appearing 0.62s ease-in;
-  position: absolute;
-  z-index: -1;
-  height: 600px;
-  width: 600px;
-  top: -80px;
-  left: -100px;
+  height: 70px;
+  width: 70px;
 }
 
 .continue {
@@ -125,12 +137,6 @@ h2 {
     border: solid 2px @color1;
   }
 
-  &:enabled {
-    &:hover {
-      animation: pressing 0.2s cubic-bezier(.36,.07,.19,.97) both;
-    }
-  }
-
   &.disabled {
     background-color: @color4;
   }
@@ -155,17 +161,6 @@ h2 {
 
 .shadow(@offset) {
   box-shadow: 0 @offset 6px -6px black;
-}
-
-@keyframes pressing {
-  0% {
-    .shadow(8px);
-    transform: translate3d(0, -4px, 0);
-  }
-  100% {
-    .shadow(2px);
-    transform: translate3d(0, 0, 0);
-  }
 }
 
 @keyframes appearing {

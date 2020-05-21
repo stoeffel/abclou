@@ -151,14 +151,20 @@ viewCorrect letter sounds = do
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
       D.div
-        [ P.className "image-container" ]
-        [ D.a [ unit <$ P.onClick ] [ viewWordImage letter ]
-        , D.img 
-          [ P.className "correct-star"
-          , P.src $ Assets.for Assets.star 
-          ]
-        , D.h2 [] [ D.text $ Letter.word letter ]
+        [ P.className "image-container", unit <$ P.onClick ]
+        [ viewWordImage letter
+        , D.div [ P.className "correct-word" ]
+            [ star
+            , D.h2 [] [ D.text $ Letter.word letter ]
+            , star
+            ]
         ]
+
+    star =
+      D.img 
+          [ P.className "correct-star"
+          , P.src $ Assets.for Assets.correct
+          ]
 
     onLetterPress :: Aff Unit
     onLetterPress = do
