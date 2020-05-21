@@ -64,25 +64,6 @@ type Quiz =
   , letters :: NonEmptyArray Letter
   }
 
-data LetterState = Enabled | Wrong | Disabled
-
-derive instance letterStateEq :: Eq LetterState
-
-instance letterStateShow :: Show LetterState where
-  show Enabled = "enabled"
-  show Disabled = "disabled"
-  show Wrong = "wrong"
-
-attemptToState :: Attempts -> Letter -> LetterState
-attemptToState First _ = Enabled
-attemptToState (Second a) b
-  | Letter.sameLetter a b = Wrong
-  | otherwise = Enabled
-attemptToState (Third a b) c
-  | Letter.sameLetter a c = Disabled
-  | Letter.sameLetter b c = Wrong
-  | otherwise = Enabled
-
 initialState :: Model
 initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
 
@@ -210,18 +191,26 @@ viewLetter attempt letter = do
   (liftAff onLetterPress) <|> viewLetter'
   pure $ SelectLetter letter
   where
-    state = attemptToState attempt letter
-
     viewLetter' :: Widget HTML Unit
     viewLetter' =
       D.button
         [ P.title (Letter.character letter)
-        , P.disabled (state /= Enabled)
+        , P.disabled (attemptToClass attempt letter /= Nothing)
         , P._id (Letter.character letter)
-        , P.classList [ Just $ "letter" , Just $ show state ]
+        , P.classList [ Just $ "letter" , attemptToClass attempt letter ]
         , unit <$ P.onClick
         ]
         [ D.text (Letter.character letter) ]
+
+    attemptToClass :: Attempts -> Letter -> Maybe String
+    attemptToClass First _ = Nothing
+    attemptToClass (Second a) b
+      | Letter.sameLetter a b = Just "wrong"
+      | otherwise = Nothing
+    attemptToClass (Third a b) c
+      | Letter.sameLetter a c = Just "disabled"
+      | Letter.sameLetter b c = Just "wrong"
+      | otherwise = Nothing
 
     onLetterPress :: Aff Unit
     onLetterPress = do
