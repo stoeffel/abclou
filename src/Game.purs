@@ -40,7 +40,6 @@ data Action
   = Loaded Sounds
   | SelectLetter Letter
   | NextGame (Maybe Letter)
-  | NoOp
 
 type Model = 
   { game :: Game
@@ -87,29 +86,6 @@ attemptToState (Third a b) c
 initialState :: Model
 initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
 
-answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | Letter.sameLetter quiz.correct answer = model 
-      { game = Correct quiz.correct
-      , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
-      }
-  | otherwise = 
-      model
-        { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
-        , game = flip Started quiz $
-            case attempt of
-              First -> Second answer
-              Second firstAnswer -> Third firstAnswer answer
-              a -> a
-        }
-answeredCorrectly _ model = model
-
-newGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
-newGame lastAnswer letters = 
-  Started First 
-  <$> iterateUntil ((/=) lastAnswer <<< Just <<< _.correct)
-  (Letter.random letters)
-
 main :: Effect Unit
 main =
   runWidgetInDom "app" $ do
@@ -128,9 +104,31 @@ update action model = case action of
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
   NextGame letter -> do
-      next <- newGame letter model.letters 
-      pure model { game = next }
-  NoOp -> pure model
+    game <- nextGame letter model.letters 
+    pure model { game = game }
+
+nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
+nextGame lastAnswer letters = 
+  Started First 
+  <$> iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
+      (Letter.random letters)
+
+answeredCorrectly :: Letter -> Model -> Model
+answeredCorrectly answer model@{ letters, game : Started attempt quiz }
+  | Letter.sameLetter quiz.correct answer = model 
+      { game = Correct quiz.correct
+      , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
+      }
+  | otherwise = 
+      model
+        { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
+        , game = flip Started quiz $
+            case attempt of
+              First -> Second answer
+              Second firstAnswer -> Third firstAnswer answer
+              a -> a
+        }
+answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
 view { game: NotStarted } = container [ viewLoading ] 
@@ -205,8 +203,7 @@ viewWordImage letter =
 
 viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
 viewLetters attempt letters =
-  D.ul [ P.className "letters" ]
-    $ AN.toArray $ viewLetter attempt <$> letters
+  D.ul [ P.className "letters" ] $ AN.toArray $ viewLetter attempt <$> letters
 
 viewLetter :: Attempts -> Letter -> Widget HTML Action
 viewLetter attempt letter = do
