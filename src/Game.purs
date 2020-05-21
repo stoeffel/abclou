@@ -112,15 +112,18 @@ answeredCorrectly answer model@{ letters, game : Started attempt quiz }
 answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
-view { game: NotStarted } = container [ viewLoading ] 
-view { game: Started attempt quiz, sounds } = container [ viewQuiz attempt quiz sounds ]
-view { game: Correct letter, sounds, letters } = container [ viewCorrect letter sounds ]
+view { game: NotStarted } = viewLoading 
+view { game: Started attempt quiz, sounds } = viewQuiz attempt quiz sounds
+view { game: Correct letter, sounds, letters } = viewCorrect letter sounds
 
-container :: forall a. Array (Widget HTML a) -> Widget HTML a
-container = D.div [ P.className "container" ] <<< A.cons (D.h1 [] [ D.text "ABC LOU" ])
+container :: forall a. Widget HTML a -> Array (Widget HTML a) -> Widget HTML a
+container title = D.div [ P.className "container" ] <<< A.cons title
+
+viewTitle :: forall a. Widget HTML a
+viewTitle = D.h1 [] [ D.text "ABC LOU" ]
 
 viewLoading :: Widget HTML Action
-viewLoading = liftAff load <|> D.text "..."
+viewLoading = liftAff load <|> container viewTitle (D.text "...")
   where
     load :: Aff Action
     load = do
@@ -135,7 +138,7 @@ viewQuiz attempt quiz sounds = do
   else 
     pure unit
   liftEffect $ Sounds.playFor sounds $ Letter.sound quiz.correct
-  D.div [ P.className "quiz" ]
+  container viewTitle
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
@@ -151,15 +154,14 @@ viewCorrect letter sounds = do
 
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
-      D.div
-        [ P.className "image-container" ]
-        [ viewWordImage letter
-        , D.div [ P.className "correct-word" ]
+      container 
+        ( D.div [ P.className "correct-word" ]
             [ star
             , D.h2 [] [ D.text $ Letter.word letter ]
             , star
             ]
-        ]
+        )
+        [ viewWordImage letter ]
 
     star =
       D.img 
