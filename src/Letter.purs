@@ -3,6 +3,7 @@ module Letter
   , all
   , character
   , word
+  , sound
   , asset
   , adjustFrequency
   , random
@@ -14,6 +15,8 @@ module Letter
 import Prelude
 
 import Assets as Assets
+import Sounds as Sounds
+import Sounds (Sound)
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
@@ -34,38 +37,43 @@ data Letter = Letter
   { word :: SN.NonEmptyString
   , asset :: Assets.Asset
   , frequency :: Number
+  , sound :: Maybe Sounds.SoundTypes
   }
 
-derive instance letterEq :: Eq Letter
+instance letterEq :: Eq Letter where
+  eq (Letter a) (Letter b) = a.word == b.word
 
 character :: Letter -> String
-character (Letter {word}) = SCU.singleton (SNC.uncons word).head
+character (Letter letter) = SCU.singleton (SNC.uncons letter.word).head
 
 word :: Letter -> String
-word (Letter {word}) = SN.toString word
+word (Letter letter) = SN.toString letter.word
 
 asset :: Letter -> String
-asset (Letter {asset}) = Assets.for asset
+asset (Letter letter) = Assets.for letter.asset
+
+sound :: Letter -> Maybe Sounds.SoundTypes
+sound (Letter letter) = letter.sound
 
 adjustFrequency :: Number -> Letter -> Letter
-adjustFrequency delta (Letter a) =
-  Letter a { frequency = clamp 1.0 5.0 $ a.frequency + delta }
+adjustFrequency delta (Letter a') =
+  Letter a' { frequency = clamp 1.0 5.0 $ a'.frequency + delta }
 
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
-random x = do
+random x' = do
   letters <- M.fromMaybe (AN.singleton a)
-    <$> randomUniqElements 3 (withFrequency <$> x)
+    <$> randomUniqElements 3 (withFrequency <$> x')
   correct <- randomWeighted (withFrequency <$> letters)
   pure { correct, letters }
 
 withFrequency :: Letter -> Tuple Number Letter
-withFrequency x@(Letter {frequency}) = Tuple frequency x
+withFrequency x'@(Letter {frequency}) = Tuple frequency x'
 
 find :: String -> NonEmptyArray Letter -> Maybe Letter
 find str = F.find ((_ == S.toUpper str) <<< character)
 
 sameLetter :: Letter -> Letter -> Boolean
-sameLetter a b = character a == character b
+sameLetter a' b' = character a' == character b'
 
 all :: NonEmptyArray Letter
 all = AN.cons' 
@@ -78,83 +86,83 @@ all = AN.cons'
   ]
 
 a :: Letter
-a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.monkey
+a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.monkey Nothing
 
 b :: Letter
-b = mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.bear
+b = mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.bear Nothing
 
 c :: Letter
-c = mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.clown
+c = mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.clown Nothing
 
 d :: Letter
-d = mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.lady
+d = mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.lady Nothing
 
 e :: Letter
-e = mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.elk
+e = mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.elk Nothing
 
 f :: Letter
-f = mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.fox
+f = mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.fox Nothing
 
 g :: Letter
-g = mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.giraffe
+g = mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.giraffe Nothing
 
 h :: Letter
-h = mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.dog
+h = mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.dog Nothing
 
 i :: Letter
-i = mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.hedgehog
+i = mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.hedgehog Nothing
 
 j :: Letter
-j = mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.hunter
+j = mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.hunter Nothing
 
 k :: Letter
-k = mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.karate
+k = mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.karate Nothing
 
 l :: Letter
-l = mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.laugh
+l = mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.laugh Nothing
 
 m :: Letter
-m = mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.mama
+m = mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.mama Nothing
 
 n :: Letter
-n = mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.nose
+n = mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.nose Nothing
 
 o :: Letter
-o = mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.ear
+o = mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.ear Nothing
 
 p :: Letter
-p = mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.papa
+p = mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.papa Nothing
 
 q :: Letter
-q = mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.quack
+q = mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.quack $ Just Sounds.Quack
 
 r :: Letter
-r = mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.rocket
+r = mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.rocket Nothing
 
 s :: Letter
-s = mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.star
+s = mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.star Nothing
 
 t :: Letter
-t = mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.dancing
+t = mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.dancing Nothing
 
 u :: Letter
-u = mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.uhu
+u = mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.uhu Nothing
 
 v :: Letter
-v = mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.bicycle
+v = mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.bicycle Nothing
 
 w :: Letter
-w = mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.winter
+w = mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.winter Nothing
 
 x :: Letter
-x = mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.xylophone
+x = mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.xylophone $ Just Sounds.Xylophone
 
 y :: Letter
-y = mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.yak
+y = mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.yak Nothing
 
 z :: Letter
-z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train
+z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train Nothing
 
-mkLetter :: SN.NonEmptyString -> Assets.Asset -> Letter
-mkLetter word asset = Letter
-  { word , asset , frequency: 1.0 }
+mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.SoundTypes -> Letter
+mkLetter word' asset' sound' = Letter
+  { word: word' , asset: asset' , frequency: 1.0, sound: sound' }

@@ -23,12 +23,14 @@ module Assets
   , nose
   , papa
   , quack
+  , quackSound
   , rocket
   , star
   , train
   , uhu
   , winter
   , xylophone
+  , xylophoneSound
   , yak
   , star
   ) where
@@ -112,6 +114,9 @@ papa = Asset "Papa"
 quack :: Asset
 quack = Asset "Quack"
 
+quackSound :: Asset
+quackSound = Asset "Quack-sound"
+
 rocket :: Asset
 rocket = Asset "Rocket"
 
@@ -126,6 +131,9 @@ winter = Asset "Winter"
 
 xylophone :: Asset
 xylophone = Asset "Xylophone"
+
+xylophoneSound :: Asset
+xylophoneSound = Asset "Xylophone-sound"
 
 yak :: Asset
 yak = Asset "Yak"

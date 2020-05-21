@@ -1,4 +1,4 @@
-module Sounds (load, play, Sounds(..), def, Sound) where
+module Sounds (load, play, playFor, Sounds(..), def, Sound, SoundTypes(..)) where
 
 import Prelude
 
@@ -13,7 +13,7 @@ import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
 
 import Effect (Effect)
-import Effect.Aff (Aff, launchAff)
+import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Exception (throw)
 
@@ -27,13 +27,21 @@ import Audio.WebAudio.Types as WT
 type Sounds =
   { tada :: Maybe Sound
   , nope :: Maybe Sound
+  , quackSound :: Maybe Sound
+  , xylophoneSound :: Maybe Sound
   }
 
 def :: Sounds
 def =
   { tada: Nothing
   , nope: Nothing
+  , quackSound: Nothing
+  , xylophoneSound: Nothing
   }
+
+data SoundTypes
+  = Quack
+  | Xylophone
 
 data Sound = Sound WT.AudioContext WT.AudioBuffer
 
@@ -46,11 +54,22 @@ load = do
       loadSoundBuffer ctx <<<
       Assets.for
     )
-    [ Assets.tada, Assets.nope ]
+    [ Assets.tada
+    , Assets.nope
+    , Assets.quackSound
+    , Assets.xylophoneSound 
+    ]
   pure 
     { tada: sounds !! 0
     , nope: sounds !! 1
+    , quackSound: sounds !! 2
+    , xylophoneSound: sounds !! 3
     }
+
+playFor :: Sounds -> Maybe SoundTypes -> Effect Unit
+playFor _ Nothing = pure unit
+playFor sounds (Just Quack) = play sounds.quackSound
+playFor sounds (Just Xylophone) = play sounds.xylophoneSound
 
 play :: Maybe Sound -> Effect Unit
 play Nothing = pure unit

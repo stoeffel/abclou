@@ -134,6 +134,7 @@ viewQuiz attempt quiz sounds = do
     liftEffect $ Sounds.play sounds.nope
   else 
     pure unit
+  liftEffect $ Sounds.playFor sounds $ Letter.sound quiz.correct
   D.div [ P.className "quiz" ]
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
