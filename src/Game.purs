@@ -175,11 +175,10 @@ viewCorrect letter sounds = do
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
   D.img
-    [ P.alt $ Letter.word letter
+    [ P.className "word-image"
+    , P.alt $ Letter.word letter
     , P.title $ Letter.word letter
     , P.src $ Letter.asset letter
-    , P.height "400"
-    , P.width "400"
     ]
 
 viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
