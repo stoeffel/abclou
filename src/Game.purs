@@ -38,13 +38,19 @@ import React.SyntheticEvent as R
 
 data Action
   = Loaded Sounds
-  | SelectLetter Letter
-  | NextGame (Maybe Letter)
+  | Answered Letter
+  | NextGame Letter
 
 type Model = 
-  { game :: Game -- TODO add field for next game
+  { game :: Focused Game
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
+  }
+
+type Focused a =
+  { prev :: Maybe a
+  , curr :: a
+  , next :: a
   }
 
 data Game 
@@ -65,7 +71,15 @@ type Quiz =
   }
 
 initialState :: Model
-initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
+initialState = 
+  { game: 
+    { prev: Nothing
+    , curr: NotStarted
+    , next: NotStarted
+    }
+  , letters: Letter.all
+  , sounds: Sounds.def 
+  }
 
 main :: Effect Unit
 main =
@@ -75,46 +89,68 @@ main =
 
 render :: forall a. Model -> Widget HTML a
 render model = do
-  action <- view model
+  action <- view model.game.curr model.sounds
   render =<< liftEffect (update action model)
 
 update :: Action -> Model -> Effect Model
 update action model = case action of
-  Loaded sounds ->
-    update (NextGame Nothing) model { sounds = sounds }
-  SelectLetter letter -> 
-    pure $ answeredCorrectly letter model
+  Loaded sounds -> do
+    first <- newQuiz Nothing model.letters 
+    pure model 
+      { game =
+          { prev: Nothing
+          , curr: Started First first
+          , next: Correct first.correct
+          }
+      , sounds = sounds
+      }
+  Answered letter -> answeredCorrectly letter model
   NextGame letter -> do
-    game <- nextGame letter model.letters 
-    pure model { game = game }
+    pure model
+      { game =
+          { prev: Just model.game.curr
+          , curr: model.game.next
+          , next: Correct $ case model.game.next of
+              Started _ {correct} -> correct
+              Correct correct -> correct
+              NotStarted -> letter
+          }
+      }
 
-nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
-nextGame lastAnswer letters = 
-  Started First 
-  <$> iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
+newQuiz :: Maybe Letter -> NonEmptyArray Letter -> Effect Quiz
+newQuiz lastAnswer letters = 
+  iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
       (Letter.random letters)
 
-answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, game : Started attempt quiz }
-  | Letter.sameLetter quiz.correct answer = model 
-      { game = Correct quiz.correct
+answeredCorrectly :: Letter -> Model -> Effect Model
+answeredCorrectly answer model@{ letters, game : { curr: Started attempt quiz } }
+  | Letter.sameLetter quiz.correct answer = do
+      next <- newQuiz (Just quiz.correct) model.letters 
+      pure model 
+        { game =
+          { prev: Just model.game.curr
+          , curr: model.game.next
+          , next: Started First next
+          }
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }
   | otherwise = 
-      model
+      pure model
         { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
-        , game = flip Started quiz $
-            case attempt of
-              First -> Second answer
-              Second firstAnswer -> Third firstAnswer answer
-              a -> a
+        , game = model.game {
+            curr = flip Started quiz $
+              case attempt of
+                First -> Second answer
+                Second firstAnswer -> Third firstAnswer answer
+                a -> a
+            }
         }
-answeredCorrectly _ model = model
+answeredCorrectly _ model = pure model
 
-view :: Model -> Widget HTML Action
-view { game: NotStarted } = viewLoading 
-view { game: Started attempt quiz, sounds } = viewQuiz attempt quiz sounds
-view { game: Correct letter, sounds, letters } = viewCorrect letter sounds
+view :: Game -> Sounds -> Widget HTML Action
+view NotStarted _ = viewLoading 
+view (Started attempt quiz) sounds = viewQuiz attempt quiz sounds
+view (Correct letter) sounds = viewCorrect letter sounds
 
 container :: forall a. Widget HTML a -> Array (Widget HTML a) -> Widget HTML a
 container title = D.div [ P.className "container" ] <<< A.cons title
@@ -123,7 +159,7 @@ viewTitle :: forall a. Widget HTML a
 viewTitle = D.h1 [] [ D.text "ABC LOU" ]
 
 viewLoading :: Widget HTML Action
-viewLoading = liftAff load <|> container viewTitle (D.text "...")
+viewLoading = liftAff load <|> container viewTitle [D.text "..."]
   where
     load :: Aff Action
     load = do
@@ -147,7 +183,7 @@ viewCorrect :: Letter -> Sounds -> Widget HTML Action
 viewCorrect letter sounds = do
   liftEffect $ Sounds.play sounds.tada
   (liftAff onLetterPress) <|> (liftAff delayed) <|> viewCorrect'
-  pure $ NextGame $ Just letter
+  pure $ NextGame letter
   where
     delayed :: Aff Unit
     delayed = Aff.delay (Milliseconds 5000.0)
@@ -157,7 +193,7 @@ viewCorrect letter sounds = do
       container 
         ( D.div [ P.className "correct-word" ]
             [ star
-            , D.h2 [] [ D.text $ Letter.word letter ]
+            , D.h1 [] [ D.text $ Letter.word letter ]
             , star
             ]
         )
@@ -195,7 +231,7 @@ viewLetters attempt letters =
 viewLetter :: Attempts -> Letter -> Widget HTML Action
 viewLetter attempt letter = do
   (liftAff onLetterPress) <|> viewLetter'
-  pure $ SelectLetter letter
+  pure $ Answered letter
   where
     viewLetter' :: Widget HTML Unit
     viewLetter' =
