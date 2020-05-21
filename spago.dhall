@@ -11,8 +11,6 @@ You can edit this file as you like.
   , "effect"
   , "exceptions"
   , "foldable-traversable"
-  , "halogen"
-  , "halogen-vdom"
   , "monad-loops"
   , "profunctor-lenses"
   , "psci-support"
