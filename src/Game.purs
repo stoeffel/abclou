@@ -43,9 +43,9 @@ import Effect.Exception (error)
 
 
 data Action
-  = Initialize
+  = Loaded Sounds
   | SelectLetter Letter
-  | NextGame Letter
+  | NextGame (Maybe Letter)
   {-- | HandleKey H.SubscriptionId KeyboardEvent --}
 
 type Model = 
@@ -121,9 +121,7 @@ main :: Effect Unit
 main =
   runWidgetInDom "app" $ do
     _ <- liftEffect CD.connectDevTools
-    sounds <- liftAff Sounds.load
-    game <- liftEffect (newGame Nothing initialState.letters)
-    render initialState { game = game, sounds = sounds } 
+    render initialState
 
 render :: forall a. Model -> Widget HTML a
 render model = do
@@ -132,20 +130,25 @@ render model = do
 
 update :: Action -> Model -> Effect Model
 update action model = case action of
+  Loaded sounds ->
+    update (NextGame Nothing) model { sounds = sounds }
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
   NextGame letter -> do
-      next <- newGame (Just letter) model.letters 
+      next <- newGame letter model.letters 
       pure model { game = next }
-  _ -> pure model
 
 view :: Model -> Widget HTML Action
-view model@{ game: NotStarted } = container [D.text "Ein Moment..."] 
-view { game: Started attempt quiz, sounds } = container [viewQuiz attempt quiz sounds]
+view model@{ game: NotStarted } = container [ viewLoading ] 
+view { game: Started attempt quiz, sounds } = container [ viewQuiz attempt quiz sounds ]
 view { game: Correct letter, sounds, letters } = container [ viewCorrect letter sounds ]
 
 container :: forall a. Array (Widget HTML a) -> Widget HTML a
 container = D.div [ P.className "container" ] <<< A.cons (D.h1 [] [ D.text "ABC LOU" ])
+
+viewLoading :: Widget HTML Action
+viewLoading =
+  (Loaded <$> liftAff Sounds.load) <|> D.text "..."
 
 viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
 viewQuiz attempt quiz sounds = do
@@ -160,9 +163,9 @@ viewQuiz attempt quiz sounds = do
 viewCorrect :: Letter -> Sounds -> Widget HTML Action
 viewCorrect letter sounds = do
   liftEffect $ Sounds.play sounds.tada
-  liftAff (NextGame letter <$ Aff.delay (Milliseconds 10000.0))
+  liftAff (NextGame (Just letter) <$ Aff.delay (Milliseconds 10000.0))
     <|> D.a 
-      [ NextGame letter <$ P.onClick
+      [ NextGame (Just letter) <$ P.onClick
       , P.className "correct"
       ]
       [ D.div
