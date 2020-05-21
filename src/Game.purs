@@ -17,15 +17,6 @@ import Data.Maybe (Maybe(..))
 import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
 
-import Concur.Core.DevTools as CD
-import Concur.Core (Widget)
-import Concur.React (HTML)
-import Concur.React.DOM as D
-import Concur.React.Props as P
-import Concur.React.Run (runWidgetInDom)
-
-import React.SyntheticEvent as R
-
 import Control.Alt ((<|>))
 import Control.Monad.Loops (iterateUntil)
 
@@ -34,6 +25,15 @@ import Effect.Class (liftEffect)
 import Effect.Aff.Class (liftAff)
 import Effect.Aff (Aff)
 import Effect.Aff as Aff
+
+import Concur.Core.DevTools as CD
+import Concur.Core (Widget)
+import Concur.React (HTML)
+import Concur.React.DOM as D
+import Concur.React.Props as P
+import Concur.React.Run (runWidgetInDom)
+
+import React.SyntheticEvent as R
 
 
 data Action
