@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "parcel index.html",
-    "build": "spago build && parcel build"
+    "build": "spago build && parcel build index.html"
   },
   "author": "",
   "license": "ISC",
