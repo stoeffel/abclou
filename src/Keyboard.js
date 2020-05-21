@@ -1,9 +1,13 @@
 "use strict";
 
-var observer = null;
+var observers = [];
 
 function innerHandler(event) {
-  if(observer) observer(event);
+  if (observers.length != 0) {
+    observers.forEach(function(observer) {
+      observer(event);
+    });
+  }
 }
 
 // Start listening for keys
@@ -21,8 +25,10 @@ exports.stopListening = function() {
 // Await a key
 // :: EffectFnAff KeyEvent
 exports._awaitKey = function (onError, onSuccess) {
-  observer = onSuccess;
+  var index = observers.length;
+  observers.push(onSuccess);
   return function (cancelError, onCancelerError, onCancelerSuccess) {
     onCancelerSuccess();
+    observers = observers.slice(index);
   };
 };

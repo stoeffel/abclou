@@ -14,6 +14,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
+import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
 
 import Concur.Core.DevTools as CD
@@ -132,7 +133,7 @@ update action model = case action of
   NoOp -> pure model
 
 view :: Model -> Widget HTML Action
-view model@{ game: NotStarted } = container [ viewLoading ] 
+view { game: NotStarted } = container [ viewLoading ] 
 view { game: Started attempt quiz, sounds } = container [ viewQuiz attempt quiz sounds ]
 view { game: Correct letter, sounds, letters } = container [ viewCorrect letter sounds ]
 
@@ -140,59 +141,57 @@ container :: forall a. Array (Widget HTML a) -> Widget HTML a
 container = D.div [ P.className "container" ] <<< A.cons (D.h1 [] [ D.text "ABC LOU" ])
 
 viewLoading :: Widget HTML Action
-viewLoading =
-  liftAff load <|> D.text "..."
+viewLoading = liftAff load <|> D.text "..."
   where
+    load :: Aff Action
     load = do
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
       pure (Loaded sounds)
 
 viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
-viewQuiz attempt quiz sounds = liftAff onLetterPress <|> do
+viewQuiz attempt quiz sounds = do
   if attempt /= First then
     liftEffect $ Sounds.play sounds.nope
-  else pure unit
+  else 
+    pure unit
   D.div [ P.className "quiz" ]
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
-  where
-    onLetterPress :: Aff Action
-    onLetterPress = do
-      ev <- Keyboard.awaitKey
-      key <- liftEffect $ R.key ev
-      case Letter.find key quiz.letters of
-        Just letter -> pure $ SelectLetter letter
-        Nothing -> pure NoOp
 
 viewCorrect :: Letter -> Sounds -> Widget HTML Action
-viewCorrect letter sounds = liftAff onLetterPress <|> do
+viewCorrect letter sounds = do
   liftEffect $ Sounds.play sounds.tada
-  liftAff (NextGame (Just letter) <$ Aff.delay (Milliseconds 10000.0))
-    <|> D.a 
-      [ NextGame (Just letter) <$ P.onClick
-      , P.className "correct"
-      ]
-      [ D.div
-          [ P.className "image-container" ]
-          [ viewWordImage letter
-          , D.img 
-            [ P.className "correct-star"
-            , P.src $ Assets.for Assets.star 
-            ]
-          ]
-      , D.h2 [] [ D.text $ Letter.word letter ]
-      ]
+  (liftAff onLetterPress) <|> (liftAff delayed) <|> viewCorrect'
+  pure $ NextGame $ Just letter
   where
-    onLetterPress :: Aff Action
+    delayed :: Aff Unit
+    delayed = Aff.delay (Milliseconds 10000.0)
+
+    viewCorrect' :: Widget HTML Unit
+    viewCorrect' =
+      D.a [ unit <$ P.onClick , P.className "correct" ]
+        [ D.div
+            [ P.className "image-container" ]
+            [ viewWordImage letter
+            , D.img 
+              [ P.className "correct-star"
+              , P.src $ Assets.for Assets.star 
+              ]
+            ]
+        , D.h2 [] [ D.text $ Letter.word letter ]
+        ]
+
+    onLetterPress :: Aff Unit
     onLetterPress = do
-      ev <- Keyboard.awaitKey
+      fiber <- Aff.forkAff Keyboard.awaitKey
+      ev <- Aff.joinFiber fiber
       key <- liftEffect $ R.key ev
       if key == " " then
-        pure $ NextGame $ Just letter
-      else
-        pure NoOp
+        pure unit
+      else 
+        onLetterPress
 
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
@@ -210,13 +209,28 @@ viewLetters attempt letters =
     $ AN.toArray $ viewLetter attempt <$> letters
 
 viewLetter :: Attempts -> Letter -> Widget HTML Action
-viewLetter attempt letter =
-  let state = attemptToState attempt letter in
-  SelectLetter letter <$ D.button
-    [ P.title (Letter.character letter)
-    , P.disabled (state /= Enabled)
-    , P._id (Letter.character letter)
-    , P.classList [ Just $ "letter" , Just $ show state ]
-    , P.onClick
-    ]
-    [ D.text (Letter.character letter) ]
+viewLetter attempt letter = do
+  (liftAff onLetterPress) <|> viewLetter'
+  pure $ SelectLetter letter
+  where
+    state = attemptToState attempt letter
+
+    viewLetter' :: Widget HTML Unit
+    viewLetter' =
+      D.button
+        [ P.title (Letter.character letter)
+        , P.disabled (state /= Enabled)
+        , P._id (Letter.character letter)
+        , P.classList [ Just $ "letter" , Just $ show state ]
+        , unit <$ P.onClick
+        ]
+        [ D.text (Letter.character letter) ]
+
+    onLetterPress :: Aff Unit
+    onLetterPress = do
+      ev <- Keyboard.awaitKey
+      key <- liftEffect $ R.key ev
+      if S.toUpper key == Letter.character letter then
+        pure unit
+      else
+        onLetterPress
