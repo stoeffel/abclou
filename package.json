@@ -14,7 +14,9 @@
   "license": "ISC",
   "devDependencies": {
     "less": "^3.11.1",
-    "parcel": "^1.12.4"
+    "parcel": "^1.12.4",
+    "purescript": "^0.13.6",
+    "spago": "^0.15.2"
   },
   "dependencies": {
     "react": "^16.13.1",
