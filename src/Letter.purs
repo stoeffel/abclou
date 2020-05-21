@@ -25,7 +25,7 @@ import Data.String.NonEmpty as SN
 import Data.String.NonEmpty.CodeUnits as SNC
 import Data.String.CodeUnits as SCU
 import Data.Symbol (SProxy(..))
-import Data.Tuple (Tuple(..), snd)
+import Data.Tuple (Tuple(..))
 
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
@@ -78,82 +78,82 @@ all = AN.cons'
   ]
 
 a :: Letter
-a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.aff
+a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.monkey
 
 b :: Letter
-b = mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.aff
+b = mkLetter (SN.nes (SProxy :: SProxy "Bär")) Assets.bear
 
 c :: Letter
-c = mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.aff
+c = mkLetter (SN.nes (SProxy :: SProxy "Clown")) Assets.clown
 
 d :: Letter
-d = mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.aff
+d = mkLetter (SN.nes (SProxy :: SProxy "Dame")) Assets.lady
 
 e :: Letter
-e = mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.aff
+e = mkLetter (SN.nes (SProxy :: SProxy "Elch")) Assets.elk
 
 f :: Letter
-f = mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.aff
+f = mkLetter (SN.nes (SProxy :: SProxy "Fuchs")) Assets.fox
 
 g :: Letter
-g = mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.aff
+g = mkLetter (SN.nes (SProxy :: SProxy "Giraffe")) Assets.giraffe
 
 h :: Letter
-h = mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.aff
+h = mkLetter (SN.nes (SProxy :: SProxy "Hund")) Assets.dog
 
 i :: Letter
-i = mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.aff
+i = mkLetter (SN.nes (SProxy :: SProxy "Igel")) Assets.hedgehog
 
 j :: Letter
-j = mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.aff
+j = mkLetter (SN.nes (SProxy :: SProxy "Jäger")) Assets.hunter
 
 k :: Letter
-k = mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.aff
+k = mkLetter (SN.nes (SProxy :: SProxy "Karate")) Assets.karate
 
 l :: Letter
-l = mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.aff
+l = mkLetter (SN.nes (SProxy :: SProxy "Lache")) Assets.laugh
 
 m :: Letter
-m = mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.aff
+m = mkLetter (SN.nes (SProxy :: SProxy "Mama")) Assets.mama
 
 n :: Letter
-n = mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.aff
+n = mkLetter (SN.nes (SProxy :: SProxy "Nase")) Assets.nose
 
 o :: Letter
-o = mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.aff
+o = mkLetter (SN.nes (SProxy :: SProxy "Ohr")) Assets.ear
 
 p :: Letter
-p = mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.aff
+p = mkLetter (SN.nes (SProxy :: SProxy "Papa")) Assets.papa
 
 q :: Letter
-q = mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.aff
+q = mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.quack
 
 r :: Letter
-r = mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.aff
+r = mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.rocket
 
 s :: Letter
-s = mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.aff
+s = mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.star
 
 t :: Letter
-t = mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.aff
+t = mkLetter (SN.nes (SProxy :: SProxy "Tanze")) Assets.dancing
 
 u :: Letter
-u = mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.aff
+u = mkLetter (SN.nes (SProxy :: SProxy "Uhu")) Assets.uhu
 
 v :: Letter
-v = mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.aff
+v = mkLetter (SN.nes (SProxy :: SProxy "Velo")) Assets.bicycle
 
 w :: Letter
-w = mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.aff
+w = mkLetter (SN.nes (SProxy :: SProxy "Winter")) Assets.winter
 
 x :: Letter
-x = mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.aff
+x = mkLetter (SN.nes (SProxy :: SProxy "Xylophone")) Assets.xylophone
 
 y :: Letter
-y = mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.aff
+y = mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.yak
 
 z :: Letter
-z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.aff
+z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train
 
 mkLetter :: SN.NonEmptyString -> Assets.Asset -> Letter
 mkLetter word asset = Letter

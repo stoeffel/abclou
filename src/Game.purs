@@ -146,19 +146,17 @@ viewCorrect letter sounds = do
   pure $ NextGame $ Just letter
   where
     delayed :: Aff Unit
-    delayed = Aff.delay (Milliseconds 10000.0)
+    delayed = Aff.delay (Milliseconds 10000000000.0)
 
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
-      D.a [ unit <$ P.onClick , P.className "correct" ]
-        [ D.div
-            [ P.className "image-container" ]
-            [ viewWordImage letter
-            , D.img 
-              [ P.className "correct-star"
-              , P.src $ Assets.for Assets.star 
-              ]
-            ]
+      D.div
+        [ P.className "image-container" ]
+        [ D.a [ unit <$ P.onClick ] [ viewWordImage letter ]
+        , D.img 
+          [ P.className "correct-star"
+          , P.src $ Assets.for Assets.star 
+          ]
         , D.h2 [] [ D.text $ Letter.word letter ]
         ]
 
