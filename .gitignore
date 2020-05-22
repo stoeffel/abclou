@@ -1,0 +1,21 @@
+/bower_components/
+/node_modules/
+/.pulp-cache/
+/output/
+/generated-docs/
+/.psc-package/
+/.psc*
+/.purs*
+/.psa*
+/.spago
+# Dependencies
+.psci_modules
+.spago
+bower_components
+node_modules
+
+# Generated files
+.psci
+output
+.cache
+dist

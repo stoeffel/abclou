@@ -1,0 +1,47 @@
+{
+  "name": "abclou-purs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "parcel index.html",
+    "build": "spago build && parcel build index.html"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "less": "^3.11.1",
+    "parcel": "^1.12.4",
+    "parcel-bundler": "^1.12.4",
+    "parcel-plugin-pwa-manifest": "^3.0.7",
+    "parcel-plugin-sw-precache": "^1.1.2",
+    "purescript": "^0.13.6",
+    "spago": "^0.15.2"
+  },
+  "dependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  },
+  "sw-precache": {
+    "maximumFileSizeToCacheInBytes": 10485760
+  },
+  "pwaManifest": {
+    "name": "ABCLOU",
+    "shortName": "ABCLOU",
+    "startURL": ".",
+    "theme": "rgba(82, 75, 75, 0.1)",
+    "display": "standalone",
+    "generateIconOptions": {
+      "baseIcon": "./original-assets/icon.png",
+      "sizes": [
+        192,
+        384,
+        512
+      ],
+      "genFavicons": true
+    }
+  }
+}
