@@ -14,6 +14,7 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
+import Data.Maybe as M
 import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
 
@@ -89,7 +90,10 @@ main =
 
 render :: forall a. Model -> Widget HTML a
 render model = do
-  action <- view model.game.curr model.sounds
+  action <- 
+    M.maybe (D.text "") viewGame model.game.prev
+    <|> widgetGame model.game.curr model.sounds
+    <|> viewGame model.game.next
   render =<< liftEffect (update action model)
 
 update :: Action -> Model -> Effect Model
@@ -147,10 +151,15 @@ answeredCorrectly answer model@{ letters, game : { curr: Started attempt quiz } 
         }
 answeredCorrectly _ model = pure model
 
-view :: Game -> Sounds -> Widget HTML Action
-view NotStarted _ = viewLoading 
-view (Started attempt quiz) sounds = viewQuiz attempt quiz sounds
-view (Correct letter) sounds = viewCorrect letter sounds
+widgetGame :: Game -> Sounds -> Widget HTML Action
+widgetGame NotStarted _ = widgetLoading 
+widgetGame (Started attempt quiz) sounds = widgetQuiz attempt quiz sounds
+widgetGame (Correct letter) sounds = widgetCorrect letter sounds
+
+viewGame :: forall a. Game -> Widget HTML a
+viewGame NotStarted = viewLoading 
+viewGame (Started attempt quiz) = viewQuiz attempt quiz
+viewGame (Correct letter) = viewCorrect letter
 
 container :: forall a. Widget HTML a -> Array (Widget HTML a) -> Widget HTML a
 container title = D.div [ P.className "container" ] <<< A.cons title
@@ -158,8 +167,8 @@ container title = D.div [ P.className "container" ] <<< A.cons title
 viewTitle :: forall a. Widget HTML a
 viewTitle = D.h1 [] [ D.text "ABC LOU" ]
 
-viewLoading :: Widget HTML Action
-viewLoading = liftAff load <|> container viewTitle [D.text "..."]
+widgetLoading :: Widget HTML Action
+widgetLoading = liftAff load <|> viewLoading
   where
     load :: Aff Action
     load = do
@@ -167,8 +176,11 @@ viewLoading = liftAff load <|> container viewTitle [D.text "..."]
       liftEffect $ Keyboard.startListening
       pure (Loaded sounds)
 
-viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
-viewQuiz attempt quiz sounds = do
+viewLoading :: forall a. Widget HTML a
+viewLoading = container viewTitle [D.text "..."]
+
+widgetQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
+widgetQuiz attempt quiz sounds = do
   if attempt /= First then
     liftEffect $ Sounds.play sounds.nope
   else 
@@ -176,34 +188,24 @@ viewQuiz attempt quiz sounds = do
   liftEffect $ Sounds.playFor sounds $ Letter.sound quiz.correct
   container viewTitle
     [ viewWordImage quiz.correct
-    , viewLetters attempt quiz.letters
+    , viewLetters $ widgetLetter attempt <$> quiz.letters
     ]
 
-viewCorrect :: Letter -> Sounds -> Widget HTML Action
-viewCorrect letter sounds = do
+viewQuiz :: forall a. Attempts -> Quiz -> Widget HTML a
+viewQuiz attempt quiz = do
+  container viewTitle
+    [ viewWordImage quiz.correct
+    , viewLetters $ viewLetter [] attempt <$> quiz.letters
+    ]
+
+widgetCorrect :: Letter -> Sounds -> Widget HTML Action
+widgetCorrect letter sounds = do
   liftEffect $ Sounds.play sounds.tada
-  (liftAff onLetterPress) <|> (liftAff delayed) <|> viewCorrect'
+  (liftAff onLetterPress) <|> (liftAff delayed) <|> viewCorrect letter
   pure $ NextGame letter
   where
     delayed :: Aff Unit
     delayed = Aff.delay (Milliseconds 5000.0)
-
-    viewCorrect' :: Widget HTML Unit
-    viewCorrect' =
-      container 
-        ( D.div [ P.className "correct-word" ]
-            [ star
-            , D.h1 [] [ D.text $ Letter.word letter ]
-            , star
-            ]
-        )
-        [ viewWordImage letter ]
-
-    star =
-      D.img 
-          [ P.className "correct-star"
-          , P.src $ Assets.for Assets.correct
-          ]
 
     onLetterPress :: Aff Unit
     onLetterPress = do
@@ -215,6 +217,24 @@ viewCorrect letter sounds = do
       else 
         onLetterPress
 
+viewCorrect :: forall a. Letter -> Widget HTML a
+viewCorrect letter =
+  container 
+    ( D.div [ P.className "correct-word" ]
+        [ star unit
+        , D.h1 [] [ D.text $ Letter.word letter ]
+        , star unit
+        ]
+    )
+    [ viewWordImage letter ]
+
+star :: forall a. Unit -> Widget HTML a
+star _ =
+  D.img 
+      [ P.className "correct-star"
+      , P.src $ Assets.for Assets.correct
+      ]
+
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
   D.img
@@ -224,36 +244,14 @@ viewWordImage letter =
     , P.src $ Letter.asset letter
     ]
 
-viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
-viewLetters attempt letters =
-  D.ul [ P.className "letters" ] $ AN.toArray $ viewLetter attempt <$> letters
+viewLetters :: forall a. NonEmptyArray (Widget HTML a) -> Widget HTML a
+viewLetters = D.ul [ P.className "letters" ] <<< AN.toArray
 
-viewLetter :: Attempts -> Letter -> Widget HTML Action
-viewLetter attempt letter = do
-  (liftAff onLetterPress) <|> viewLetter'
+widgetLetter :: Attempts -> Letter -> Widget HTML Action
+widgetLetter attempt letter = do
+  (liftAff onLetterPress) <|> viewLetter [unit <$ P.onClick] attempt letter
   pure $ Answered letter
   where
-    viewLetter' :: Widget HTML Unit
-    viewLetter' =
-      D.button
-        [ P.title (Letter.character letter)
-        , P.disabled (attemptToClass attempt letter /= Nothing)
-        , P._id (Letter.character letter)
-        , P.classList [ Just $ "letter" , attemptToClass attempt letter ]
-        , unit <$ P.onClick
-        ]
-        [ D.text (Letter.character letter) ]
-
-    attemptToClass :: Attempts -> Letter -> Maybe String
-    attemptToClass First _ = Nothing
-    attemptToClass (Second a) b
-      | Letter.sameLetter a b = Just "wrong"
-      | otherwise = Nothing
-    attemptToClass (Third a b) c
-      | Letter.sameLetter a c = Just "disabled"
-      | Letter.sameLetter b c = Just "wrong"
-      | otherwise = Nothing
-
     onLetterPress :: Aff Unit
     onLetterPress = do
       ev <- Keyboard.awaitKey
@@ -262,3 +260,24 @@ viewLetter attempt letter = do
         pure unit
       else
         onLetterPress
+
+viewLetter :: forall a. Array (P.ReactProps a) -> Attempts -> Letter -> Widget HTML a
+viewLetter attrs attempt letter =
+  D.button
+    ([ P.title (Letter.character letter)
+    , P.disabled (attemptToClass attempt letter /= Nothing)
+    , P._id (Letter.character letter)
+    , P.classList [ Just $ "letter" , attemptToClass attempt letter ]
+    ] <> attrs)
+    [ D.text (Letter.character letter) ]
+
+attemptToClass :: Attempts -> Letter -> Maybe String
+attemptToClass First _ = Nothing
+attemptToClass (Second a) b
+  | Letter.sameLetter a b = Just "wrong"
+  | otherwise = Nothing
+attemptToClass (Third a b) c
+  | Letter.sameLetter a c = Just "disabled"
+  | Letter.sameLetter b c = Just "wrong"
+  | otherwise = Nothing
+
