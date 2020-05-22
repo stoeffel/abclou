@@ -199,11 +199,13 @@ fading k fade children = do
 
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
-  D.img
-    [ P.className "word-image"
-    , P.alt $ Letter.word letter
-    , P.title $ Letter.word letter
-    , P.src $ Letter.asset letter
+  D.div [ P.className "word-image-container" ]
+    [ D.img
+        [ P.className "word-image"
+        , P.alt $ Letter.word letter
+        , P.title $ Letter.word letter
+        , P.src $ Letter.asset letter
+        ]
     ]
 
 viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
