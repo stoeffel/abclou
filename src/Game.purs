@@ -120,7 +120,7 @@ container :: forall a. Widget HTML a -> Widget HTML a -> Widget HTML a
 container title = D.div [ P.className "container" ] <<< A.cons title <<< A.singleton
 
 viewTitle :: forall a. Widget HTML a
-viewTitle = D.h1 [] [ D.text "ABC LOU" ]
+viewTitle = D.div [ P.className "title-container" ] [D.h1 [] [ D.text "ABC LOU" ]]
 
 viewLoading :: Widget HTML Action
 viewLoading = liftAff load <|> container viewTitle (D.text "...")
@@ -138,7 +138,7 @@ viewQuiz attempt quiz sounds = do
   else 
     pure unit
   liftEffect $ Sounds.playFor sounds $ Letter.sound quiz.correct
-  container viewTitle $ fading (Letter.character quiz.correct)
+  container viewTitle $ fading (Letter.character quiz.correct) FadeIn
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
@@ -155,12 +155,12 @@ viewCorrect letter sounds = do
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
       container 
-        ( D.div [ P.className "correct-word" ]
+        ( D.div [ P.className "title-container" ]
             [ star
             , D.h1 [] [ D.text $ Letter.word letter ]
             , star
             ]
-        ) $ fading (Letter.character letter)
+        ) $ fading (Letter.character letter) FadeOut
         [ viewWordImage letter ]
 
     star =
@@ -179,26 +179,31 @@ viewCorrect letter sounds = do
       else 
         onLetterPress
 
-fading :: forall a. String -> Array (Widget HTML a) -> Widget HTML a
-fading k children = do
-  liftAff (delayed 50.0) <|> (unit <$ view' Nothing children)
-  view' (Just "fade-in") children
+data Fading
+  = FadeIn
+  | FadeOut
+
+fading :: forall a. String -> Fading -> Array (Widget HTML a) -> Widget HTML a
+fading k fade children = do
+  let config = case fade of
+        FadeIn -> {delay: 50.0, class: "fade-in", start: "in"}
+        FadeOut -> {delay: 2700.0, class: "fade-out", start: "out"}
+  liftAff (delayed config.delay) <|> (unit <$ view' config.start Nothing children)
+  view' config.start (Just config.class) children
   where
-    view' :: forall b. Maybe String -> Array (Widget HTML b) -> Widget HTML b
-    view' x = D.div [ P.classList [Just "fading", x] , P.key k ]
+    view' :: forall b. String -> Maybe String -> Array (Widget HTML b) -> Widget HTML b
+    view' x y = D.div [ P.classList [Just "fading", Just x, y] , P.key k ]
 
     delayed :: Number -> Aff Unit
     delayed = Aff.delay <<< Milliseconds
 
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
-  D.div [ P.className "word-image-wrapper" ]
-    [ D.img
-      [ P.className "word-image"
-      , P.alt $ Letter.word letter
-      , P.title $ Letter.word letter
-      , P.src $ Letter.asset letter
-      ]
+  D.img
+    [ P.className "word-image"
+    , P.alt $ Letter.word letter
+    , P.title $ Letter.word letter
+    , P.src $ Letter.asset letter
     ]
 
 viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
