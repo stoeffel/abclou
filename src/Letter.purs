@@ -46,7 +46,7 @@ character :: Letter -> String
 character (Letter letter) = SCU.singleton (SNC.uncons letter.word).head
 
 word :: Letter -> String
-word (Letter letter) = SN.toString letter.word
+word (Letter letter) = S.toUpper $ SN.toString letter.word
 
 asset :: Letter -> String
 asset (Letter letter) = Assets.for letter.asset
@@ -136,7 +136,7 @@ q :: Letter
 q = mkLetter (SN.nes (SProxy :: SProxy "Quack")) Assets.quack $ Just Sounds.Quack
 
 r :: Letter
-r = mkLetter (SN.nes (SProxy :: SProxy "Raggete")) Assets.rocket Nothing
+r = mkLetter (SN.nes (SProxy :: SProxy "Rakete")) Assets.rocket Nothing
 
 s :: Letter
 s = mkLetter (SN.nes (SProxy :: SProxy "Stern")) Assets.star Nothing
