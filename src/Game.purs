@@ -91,9 +91,11 @@ main =
 render :: forall a. Model -> Widget HTML a
 render model = do
   action <- 
-    M.maybe (D.text "") viewGame model.game.prev
-    <|> widgetGame model.game.curr model.sounds
-    <|> viewGame model.game.next
+    D.div [ P.className "app-wrapper" ]
+      --[ --M.maybe (D.text "") viewGame model.game.prev
+      [ widgetGame model.game.curr model.sounds
+      , viewGame model.game.next
+      ]
   render =<< liftEffect (update action model)
 
 update :: Action -> Model -> Effect Model
@@ -242,6 +244,7 @@ viewWordImage letter =
     , P.alt $ Letter.word letter
     , P.title $ Letter.word letter
     , P.src $ Letter.asset letter
+    , P.key $ Letter.word letter
     ]
 
 viewLetters :: forall a. NonEmptyArray (Widget HTML a) -> Widget HTML a
