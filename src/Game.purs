@@ -116,10 +116,10 @@ view { game: NotStarted } = viewLoading
 view { game: Started attempt quiz, sounds } = viewQuiz attempt quiz sounds
 view { game: Correct letter, sounds, letters } = viewCorrect letter sounds
 
-container :: forall a. Widget HTML a -> Widget HTML a -> Widget HTML a
+container :: forall a. Title -> Widget HTML a -> Widget HTML a
 container title content =
   D.div [ P.className "container" ] 
-    [ title
+    [ viewTitle title
     , content
     , D.small
         [ P.className "attributation" ]
@@ -129,12 +129,29 @@ container title content =
         ]
     ]
 
+data Title
+  = AppTitle
+  | CorrectTitle Letter
 
-viewTitle :: forall a. Widget HTML a
-viewTitle = D.div [ P.className "title-container" ] [D.h1 [] [ D.text "ABC LOU" ]]
+viewTitle :: forall a. Title -> Widget HTML a
+viewTitle title =
+  D.div [ P.className "title-container" ]
+    [ maybeStar
+    , D.h1 [] [ D.text titleText ]
+    , maybeStar
+    ]
+  where
+    titleText = case title of
+      AppTitle -> "ABC LOU"
+      CorrectTitle letter -> Letter.word letter
+    maybeStar = case title of
+      AppTitle -> D.text ""
+      CorrectTitle _ ->
+        D.img [ P.className "correct-star" , P.src $ Assets.for Assets.correct ]
+
 
 viewLoading :: Widget HTML Action
-viewLoading = liftAff load <|> container viewTitle (D.text "...")
+viewLoading = liftAff load <|> container AppTitle (D.text "...")
   where
     load :: Aff Action
     load = do
@@ -151,7 +168,7 @@ viewQuiz attempt quiz sounds = do
   case Letter.sound quiz.correct of
     Just sound -> liftEffect $ Sounds.play sound sounds
     Nothing -> pure unit
-  container viewTitle $ fading (Letter.character quiz.correct) FadeIn
+  container AppTitle $ fading (Letter.character quiz.correct) FadeIn
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
@@ -167,25 +184,14 @@ viewCorrect letter sounds = do
 
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
-      container 
-        ( D.div [ P.className "title-container" ]
-            [ star
-            , D.h1 [] [ D.text $ Letter.word letter ]
-            , star
-            ]
-        ) $ fading (Letter.character letter) FadeOut
+      container (CorrectTitle letter) 
+        $ fading (Letter.character letter) FadeOut
         [ viewWordImage letter
         , D.ul [ P.className "letters" ]
             [ D.h3 [ P.className "correct-letter", P._id (Letter.character letter) ] 
                 [ D.text (Letter.character letter) ]
             ]
         ]
-
-    star =
-      D.img 
-          [ P.className "correct-star"
-          , P.src $ Assets.for Assets.correct
-          ]
 
     onLetterPress :: Aff Unit
     onLetterPress = do
