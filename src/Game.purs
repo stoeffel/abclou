@@ -9,7 +9,6 @@ import Letter (Letter)
 import Sounds as Sounds
 import Sounds (Sounds)
 
-import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
@@ -114,7 +113,8 @@ answeredCorrectly _ model = model
 view :: Model -> Widget HTML Action
 view { game: NotStarted } = viewLoading 
 view { game: Started attempt quiz, sounds } = 
-  D.div [ P.className "container" ] 
+  D.div [ P.classList [ Just "app", maybeCorrectClass ] ] 
+    [ D.div [ P.className "container" ] 
       [ viewTitle title
       , content
       , viewLetters attempt quiz.letters
@@ -125,16 +125,19 @@ view { game: Started attempt quiz, sounds } =
           , D.text "Code @ github.com/stoeffel/abclou"
           ]
       ]
+    ]
   where
-    {content, title} =
+    {content, title, maybeCorrectClass} =
       case attempt of
         Correct letter ->
           { content: viewCorrect letter sounds
           , title: CorrectTitle letter
+          , maybeCorrectClass: Just "correct"
           }
         _ ->
           { content: viewQuiz attempt quiz sounds
           , title: AppTitle
+          , maybeCorrectClass: Nothing
           }
 
 data Title
@@ -189,6 +192,7 @@ viewWordImage letter =
         , P.alt $ Letter.word letter
         , P.title $ Letter.word letter
         , P.src $ Letter.asset letter
+        , P.key $ Letter.character letter <> "-image"
         ]
     ]
 
