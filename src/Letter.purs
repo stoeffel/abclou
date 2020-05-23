@@ -36,7 +36,7 @@ data Letter = Letter
   { word :: SN.NonEmptyString
   , asset :: Assets.Asset
   , frequency :: Number
-  , sound :: Maybe Sounds.SoundTypes
+  , sound :: Maybe Sounds.Key
   }
 
 instance letterEq :: Eq Letter where
@@ -51,7 +51,7 @@ word (Letter letter) = S.toUpper $ SN.toString letter.word
 asset :: Letter -> String
 asset (Letter letter) = Assets.for letter.asset
 
-sound :: Letter -> Maybe Sounds.SoundTypes
+sound :: Letter -> Maybe Sounds.Key
 sound (Letter letter) = letter.sound
 
 adjustFrequency :: Number -> Letter -> Letter
@@ -162,6 +162,6 @@ y = mkLetter (SN.nes (SProxy :: SProxy "Yak")) Assets.yak Nothing
 z :: Letter
 z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train Nothing
 
-mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.SoundTypes -> Letter
+mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.Key -> Letter
 mkLetter word' asset' sound' = Letter
   { word: word' , asset: asset' , frequency: 1.0, sound: sound' }

@@ -145,10 +145,12 @@ viewLoading = liftAff load <|> container viewTitle (D.text "...")
 viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
 viewQuiz attempt quiz sounds = do
   if attempt /= First then
-    liftEffect $ Sounds.play sounds.nope
+    liftEffect $ Sounds.play Sounds.Nope sounds
   else 
     pure unit
-  liftEffect $ Sounds.playFor sounds $ Letter.sound quiz.correct
+  case Letter.sound quiz.correct of
+    Just sound -> liftEffect $ Sounds.play sound sounds
+    Nothing -> pure unit
   container viewTitle $ fading (Letter.character quiz.correct) FadeIn
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
@@ -156,7 +158,7 @@ viewQuiz attempt quiz sounds = do
 
 viewCorrect :: Letter -> Sounds -> Widget HTML Action
 viewCorrect letter sounds = do
-  liftEffect $ Sounds.play sounds.tada
+  liftEffect $ Sounds.play Sounds.Tada sounds
   (liftAff onLetterPress) <|> (liftAff delayed) <|> viewCorrect'
   pure $ NextGame $ Just letter
   where

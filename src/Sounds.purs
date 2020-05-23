@@ -1,4 +1,4 @@
-module Sounds (load, play, playFor, Sounds(..), def, Sound, SoundTypes(..)) where
+module Sounds (load, play, Sounds(..), def, Sound, Key(..)) where
 
 import Prelude
 
@@ -11,6 +11,9 @@ import Data.Either (Either(..))
 import Data.HTTP.Method (Method(GET))
 import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
+import Data.Map (Map)
+import Data.Map as Map
+import Data.Tuple (Tuple(..))
 
 import Effect (Effect)
 import Effect.Aff (Aff)
@@ -24,24 +27,19 @@ import Audio.WebAudio.BaseAudioContext as WB
 import Audio.WebAudio.Types as WT
 
 
-type Sounds =
-  { tada :: Maybe Sound
-  , nope :: Maybe Sound
-  , quackSound :: Maybe Sound
-  , xylophoneSound :: Maybe Sound
-  }
+type Sounds = Map Key Sound
 
 def :: Sounds
-def =
-  { tada: Nothing
-  , nope: Nothing
-  , quackSound: Nothing
-  , xylophoneSound: Nothing
-  }
+def = Map.empty
 
-data SoundTypes
-  = Quack
+data Key
+  = Tada
+  | Nope
+  | Quack
   | Xylophone
+
+derive instance soundTypesEq :: Eq Key
+derive instance soundTypesOrd :: Ord Key
 
 data Sound = Sound WT.AudioContext WT.AudioBuffer
 
@@ -49,37 +47,31 @@ load :: Aff Sounds
 load = do
   ctx <- liftEffect WB.newAudioContext
   sounds <- sequential $ traverse 
-    ( parallel <<<
-      map (Sound ctx) <<<
-      loadSoundBuffer ctx <<<
-      Assets.for
+    (\(Tuple k v) ->
+      parallel
+        $ map (Tuple k <<< Sound ctx)
+        $ loadSoundBuffer ctx
+        $ Assets.for v
     )
-    [ Assets.tada
-    , Assets.nope
-    , Assets.quackSound
-    , Assets.xylophoneSound 
+    [ Tuple Tada Assets.tada
+    , Tuple Nope Assets.nope
+    , Tuple Quack Assets.quackSound
+    , Tuple Xylophone Assets.xylophoneSound 
     ]
-  pure 
-    { tada: sounds !! 0
-    , nope: sounds !! 1
-    , quackSound: sounds !! 2
-    , xylophoneSound: sounds !! 3
-    }
+  pure $ Map.fromFoldable sounds
 
-playFor :: Sounds -> Maybe SoundTypes -> Effect Unit
-playFor _ Nothing = pure unit
-playFor sounds (Just Quack) = play sounds.quackSound
-playFor sounds (Just Xylophone) = play sounds.xylophoneSound
-
-play :: Maybe Sound -> Effect Unit
-play Nothing = pure unit
-play (Just (Sound ctx buffer)) = do
-  startTime <- WB.currentTime ctx
-  src <- WB.createBufferSource ctx
-  dst <- WB.destination ctx
-  _ <- WT.connect src dst
-  _ <- WA.setBuffer buffer src
-  WA.startBufferSource WA.defaultStartOptions src
+play :: Key -> Sounds -> Effect Unit
+play k = play' <<< Map.lookup k
+  where
+    play' :: Maybe Sound -> Effect Unit
+    play' Nothing = pure unit
+    play' (Just (Sound ctx buffer)) = do
+      startTime <- WB.currentTime ctx
+      src <- WB.createBufferSource ctx
+      dst <- WB.destination ctx
+      _ <- WT.connect src dst
+      _ <- WA.setBuffer buffer src
+      WA.startBufferSource WA.defaultStartOptions src
 
 loadSoundBuffer :: WT.AudioContext -> String -> Aff WT.AudioBuffer
 loadSoundBuffer ctx filename = do
