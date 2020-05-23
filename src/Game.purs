@@ -161,7 +161,12 @@ viewCorrect letter sounds = do
             , star
             ]
         ) $ fading (Letter.character letter) FadeOut
-        [ viewWordImage letter ]
+        [ viewWordImage letter
+        , D.ul [ P.className "letters" ]
+            [ D.h3 [ P.className "correct-letter", P._id (Letter.character letter) ] 
+                [ D.text (Letter.character letter) ]
+            ]
+        ]
 
     star =
       D.img 
