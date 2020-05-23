@@ -117,7 +117,18 @@ view { game: Started attempt quiz, sounds } = viewQuiz attempt quiz sounds
 view { game: Correct letter, sounds, letters } = viewCorrect letter sounds
 
 container :: forall a. Widget HTML a -> Widget HTML a -> Widget HTML a
-container title = D.div [ P.className "container" ] <<< A.cons title <<< A.singleton
+container title content =
+  D.div [ P.className "container" ] 
+    [ title
+    , content
+    , D.small
+        [ P.className "attributation" ]
+        [ D.text "Graphics by J. Moffitt"
+        , D.text " / "
+        , D.text "Code @ github.com/stoeffel/abclou"
+        ]
+    ]
+
 
 viewTitle :: forall a. Widget HTML a
 viewTitle = D.div [ P.className "title-container" ] [D.h1 [] [ D.text "ABC LOU" ]]
