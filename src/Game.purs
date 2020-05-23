@@ -116,11 +116,13 @@ view { game: NotStarted } = viewLoading
 view { game: Started attempt quiz, sounds } = viewQuiz attempt quiz sounds
 view { game: Correct letter, sounds, letters } = viewCorrect letter sounds
 
-container :: forall a. Title -> Widget HTML a -> Widget HTML a
-container title content =
+newtype Key = Key String
+
+container :: forall a. Key -> Title -> Fading -> Array (Widget HTML a) -> Widget HTML a
+container key title fade content =
   D.div [ P.className "container" ] 
     [ viewTitle title
-    , content
+    , fading key fade content
     , D.small
         [ P.className "attributation" ]
         [ D.text "Graphics by J. Moffitt"
@@ -128,6 +130,25 @@ container title content =
         , D.text "Code @ github.com/stoeffel/abclou"
         ]
     ]
+
+data Fading
+  = FadeIn
+  | FadeOut
+
+fading :: forall a. Key -> Fading -> Array (Widget HTML a) -> Widget HTML a
+fading (Key k) fade children = do
+  let config = case fade of
+        FadeIn -> {delay: 50.0, class: "fade-in", start: "in"}
+        FadeOut -> {delay: 2700.0, class: "fade-out", start: "out"}
+  liftAff (delayed config.delay) <|> (unit <$ view' config.start Nothing children)
+  view' config.start (Just config.class) children
+  where
+    view' :: forall b. String -> Maybe String -> Array (Widget HTML b) -> Widget HTML b
+    view' x y = D.div [ P.classList [Just "fading", Just x, y], P.key k ]
+
+    delayed :: Number -> Aff Unit
+    delayed = Aff.delay <<< Milliseconds
+
 
 data Title
   = AppTitle
@@ -151,7 +172,7 @@ viewTitle title =
 
 
 viewLoading :: Widget HTML Action
-viewLoading = liftAff load <|> container AppTitle (D.text "...")
+viewLoading = liftAff load <|> container (Key "loading") AppTitle FadeIn [D.text "..."]
   where
     load :: Aff Action
     load = do
@@ -168,7 +189,7 @@ viewQuiz attempt quiz sounds = do
   case Letter.sound quiz.correct of
     Just sound -> liftEffect $ Sounds.play sound sounds
     Nothing -> pure unit
-  container AppTitle $ fading (Letter.character quiz.correct) FadeIn
+  container (Key $ Letter.character quiz.correct) AppTitle FadeIn
     [ viewWordImage quiz.correct
     , viewLetters attempt quiz.letters
     ]
@@ -184,8 +205,7 @@ viewCorrect letter sounds = do
 
     viewCorrect' :: Widget HTML Unit
     viewCorrect' =
-      container (CorrectTitle letter) 
-        $ fading (Letter.character letter) FadeOut
+      container (Key $ Letter.character letter) (CorrectTitle letter) FadeOut
         [ viewWordImage letter
         , D.ul [ P.className "letters" ]
             [ D.h3 [ P.className "correct-letter", P._id (Letter.character letter) ] 
@@ -202,24 +222,6 @@ viewCorrect letter sounds = do
         pure unit
       else 
         onLetterPress
-
-data Fading
-  = FadeIn
-  | FadeOut
-
-fading :: forall a. String -> Fading -> Array (Widget HTML a) -> Widget HTML a
-fading k fade children = do
-  let config = case fade of
-        FadeIn -> {delay: 50.0, class: "fade-in", start: "in"}
-        FadeOut -> {delay: 2700.0, class: "fade-out", start: "out"}
-  liftAff (delayed config.delay) <|> (unit <$ view' config.start Nothing children)
-  view' config.start (Just config.class) children
-  where
-    view' :: forall b. String -> Maybe String -> Array (Widget HTML b) -> Widget HTML b
-    view' x y = D.div [ P.classList [Just "fading", Just x, y] , P.key k ]
-
-    delayed :: Number -> Aff Unit
-    delayed = Aff.delay <<< Milliseconds
 
 viewWordImage :: forall a. Letter -> Widget HTML a
 viewWordImage letter =
