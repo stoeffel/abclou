@@ -151,7 +151,7 @@ h1 {
   }
 
   &.wrong, &.disabled, &.unfocused, &.correct {
-    .background-ease();
+    transition: background-color 0.5s ease;
     box-shadow: none;
     text-shadow: none;
     transform: translate3d(0, 0, 0);
@@ -169,10 +169,6 @@ h1 {
     background-color: @color-grey;
     opacity: 0.3;
   }
-}
-
-.background-ease {
-  transition: background-color 0.5s ease;
 }
 
 .shadow(@offset) {
@@ -194,15 +190,6 @@ h1 {
   100% {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }
 
