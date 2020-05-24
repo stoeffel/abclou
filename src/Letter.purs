@@ -32,7 +32,7 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
 
-data Letter = Letter
+newtype Letter = Letter
   { word :: SN.NonEmptyString
   , asset :: Assets.Asset
   , frequency :: Number
