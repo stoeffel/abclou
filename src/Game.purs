@@ -2,7 +2,6 @@ module Game where
 
 import Prelude
 
-import Assets as Assets
 import Keyboard as Keyboard
 import Letter as Letter
 import Letter (Letter)
@@ -18,6 +17,8 @@ import Data.Time.Duration (Milliseconds(..))
 
 import Control.Alt ((<|>))
 import Control.Monad.Loops (iterateUntil)
+
+import Record (merge)
 
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -48,19 +49,20 @@ type Model =
 
 data Game 
   = NotStarted
-  | Started Attempts Quiz
+  | Started Quiz
 
-data Attempts
+data Attempt
   = First
   | Second Letter
   | Third Letter Letter
   | Correct Letter
 
-derive instance attemptsEq :: Eq Attempts
+derive instance attemptsEq :: Eq Attempt
 
 type Quiz =
   { correct :: Letter
   , letters :: NonEmptyArray Letter
+  , attempt :: Attempt 
   }
 
 initialState :: Model
@@ -88,36 +90,37 @@ update action model = case action of
     pure model { game = game }
 
 nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
-nextGame lastAnswer letters = 
-  Started First 
-  <$> iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
+nextGame lastAnswer letters = do
+  quizData <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
       (Letter.random letters)
+  pure $ Started $ merge quizData {attempt: First}
 
 answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, game : Started attempt quiz }
+answeredCorrectly answer model@{ letters, game : Started quiz }
   | Letter.sameLetter quiz.correct answer = model 
-      { game = Started (Correct quiz.correct) quiz
+      { game = Started quiz { attempt = Correct quiz.correct }
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }
   | otherwise = 
       model
         { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
-        , game = flip Started quiz $
-            case attempt of
+        , game = Started quiz 
+            { attempt = case quiz.attempt of
               First -> Second answer
               Second firstAnswer -> Third firstAnswer answer
               a -> a
+            }
         }
 answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
 view { game: NotStarted } = viewLoading 
-view { game: Started attempt quiz, sounds } = 
+view { game: Started quiz, sounds } = 
   D.div [ P.classList [ Just "app", maybeCorrectClass ] ] 
     [ D.div [ P.className "container" ] 
       [ viewTitle title
       , content
-      , viewLetters attempt quiz.letters
+      , viewLetters quiz
       , D.small
           [ P.className "attributation" ]
           [ D.text "Graphics by J. Moffitt"
@@ -128,14 +131,14 @@ view { game: Started attempt quiz, sounds } =
     ]
   where
     {content, title, maybeCorrectClass} =
-      case attempt of
+      case quiz.attempt of
         Correct letter ->
           { content: viewCorrect letter sounds
           , title: CorrectTitle letter
           , maybeCorrectClass: Just "correct"
           }
         _ ->
-          { content: viewQuiz attempt quiz sounds
+          { content: viewQuiz quiz sounds
           , title: AppTitle
           , maybeCorrectClass: Nothing
           }
@@ -164,9 +167,9 @@ viewLoading = liftAff load <|> D.text "..."
       liftEffect $ Keyboard.startListening
       pure (Loaded sounds)
 
-viewQuiz :: Attempts -> Quiz -> Sounds -> Widget HTML Action
-viewQuiz attempt quiz sounds = do
-  if attempt /= First then
+viewQuiz :: Quiz -> Sounds -> Widget HTML Action
+viewQuiz quiz sounds = do
+  if quiz.attempt /= First then
     liftEffect $ Sounds.play Sounds.Nope sounds
   else 
     pure unit
@@ -196,14 +199,14 @@ viewWordImage letter =
         ]
     ]
 
-viewLetters :: Attempts -> NonEmptyArray Letter -> Widget HTML Action
-viewLetters attempt letters =
+viewLetters :: Quiz -> Widget HTML Action
+viewLetters {attempt, letters} =
   D.ul [ P.className "letters" ]
     $ AN.toArray
     $ viewLetter attempt
    <$> letters
 
-viewLetter :: Attempts -> Letter -> Widget HTML Action
+viewLetter :: Attempt -> Letter -> Widget HTML Action
 viewLetter attempt letter = do
   (liftAff onLetterPress) <|> viewLetter'
   pure $ SelectLetter letter
@@ -219,7 +222,7 @@ viewLetter attempt letter = do
         ]
         [ D.text (Letter.character letter) ]
 
-    attemptToClass :: Attempts -> Letter -> Maybe String
+    attemptToClass :: Attempt -> Letter -> Maybe String
     attemptToClass First _ = Nothing
     attemptToClass (Second a) b
       | Letter.sameLetter a b = Just "wrong"
