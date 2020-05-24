@@ -48,8 +48,8 @@ type Model =
   }
 
 data Game 
-  = NotStarted
-  | Started Quiz
+  = Loading
+  | AbcLou Quiz
 
 data Attempt
   = First
@@ -66,7 +66,7 @@ type Quiz =
   }
 
 initialState :: Model
-initialState = { game: NotStarted, letters: Letter.all, sounds: Sounds.def }
+initialState = { game: Loading, letters: Letter.all, sounds: Sounds.def }
 
 main :: Effect Unit
 main =
@@ -93,18 +93,18 @@ nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
 nextGame lastAnswer letters = do
   quizData <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
       (Letter.random letters)
-  pure $ Started $ merge quizData {attempt: First}
+  pure $ AbcLou $ merge quizData {attempt: First}
 
 answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, game : Started quiz }
+answeredCorrectly answer model@{ letters, game : AbcLou quiz }
   | Letter.sameLetter quiz.correct answer = model 
-      { game = Started quiz { attempt = Correct quiz.correct }
+      { game = AbcLou quiz { attempt = Correct quiz.correct }
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }
   | otherwise = 
       model
         { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
-        , game = Started quiz 
+        , game = AbcLou quiz 
             { attempt = case quiz.attempt of
               First -> Second answer
               Second firstAnswer -> Third firstAnswer answer
@@ -114,8 +114,8 @@ answeredCorrectly answer model@{ letters, game : Started quiz }
 answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
-view { game: NotStarted } = viewLoading 
-view { game: Started quiz, sounds } = 
+view { game: Loading } = viewLoading 
+view { game: AbcLou quiz, sounds } = 
   D.div [ P.classList [ Just "app", maybeCorrectClass ] ] 
     [ D.div [ P.className "container" ] 
       [ viewTitle title
