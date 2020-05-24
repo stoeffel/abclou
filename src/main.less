@@ -6,37 +6,30 @@
 @color3: rgba(4, 216, 78, 1);
 @color4: rgba(242, 202, 4, 1);
 @color5: rgba(242, 135, 4, 1);
-@border-radius: 15px;
+@border-radius: 15pt;
 .nice-font { font-family: 'Patrick Hand', cursive; }
 
 html,body,#app {
-  max-height: 100%;
   max-width: 100%;
-  height: 100%;
-  overflow: hidden;
   margin: 0;
   .nice-font();
-}
-
-#app {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
   background-color: @color0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
 }
 
 .app {
+  padding-top: 60pt;
+  min-height: 100vh;
   background-color: @color0;
   transition: opacity, background-color 0.5s ease-in-out;
   &.correct {
     background-color: rgba(4, 216, 78, 0.4);
   }
-  height: 100%;
   display: flex;
   align-items: center;
-  justify-content: stretch;
   flex-direction: column;
   width: 100%;
 }
@@ -46,52 +39,40 @@ html,body,#app {
   align-items: center;
   flex-direction: column;
   align-items: center;
-  height: 100%;
-  padding-left: 5px;
-  padding-right: 5px;
-  padding-bottom: 5px;
+  padding-left: 5pt;
+  padding-right: 5pt;
+  padding-bottom: 5pt;
 }
 
 h1 {
-  padding-top: 44px;
+  margin: 0pt;
+  margin-top: 12pt;
   text-align: center;
   color: @color1;
   font-size: 4em;
-  margin-bottom: 10px;
-  margin-top: 0px;
+  margin-bottom: 10pt;
   opacity: 1;
-  text-shadow: 0px 0px 20px white;
+  text-shadow: 0pt 0pt 20pt white;
   transition: all 0.8s ease;
   &.correct-star {
     color: @color-black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    position: relative;
   }
-  &.correct-star::before {
-    .star();
-    left: -50px;
-  }
-  &.correct-star::after {
-    .star();
-    right: 50px;
-  }
-}
-
-.star {
-  animation: appearing 0.62s ease-in-out;
-  height: 50px;
-  width: 50px;
-  content: '';
-  background: url("../assets/correct.png");
-  display: inline-block;
 }
 
 .word-image-container {
-  min-height: 400px;
+  min-height: 420px;
   flex: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   .word-image {
-    max-width: 400px;
+    animation: appearing 0.62s ease-in-out;
+    max-width: 400pt;
     flex-grow: 2;
     transition: all 0.5s ease;
   }
@@ -99,18 +80,18 @@ h1 {
 
 .continue {
   .nice-font();
-  .shadow(8px);
+  .shadow(8pt);
   background-color: @color2;
   border-radius: @border-radius;
   border: none;
   box-sizing: border-box;
-  height: 150px;
-  width: 150px;
+  height: 150pt;
+  width: 150pt;
   color: @color-black;
   font-size: 5em;
   opacity: 1;
-  text-shadow: 0px 0px 20px white, 0px 0px 2px white;
-  transform: translate3d(0, -4px, 0);
+  text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
+  transform: translate3d(0, -4pt, 0);
   transition: background-color, transform, box-shadow 0.5s ease;
 
   &:hover {
@@ -120,9 +101,13 @@ h1 {
 
 .letters {
   display: flex;
-  padding: 0px;
-  margin: 1.2em;
-  align-self: stretch;
+  padding: 0pt;
+  margin: 0pt;
+  margin-bottom: 10pt;
+  margin-left: 16pt;
+  margin-right: 16pt;
+  justify-content: space-around;
+  width: 270pt;
 }
 
 .letter-base {
@@ -133,26 +118,26 @@ h1 {
   color: @color-black;
   font-size: 3em;
   height: 100%;
-  max-height: 300px;
+  max-height: 300pt;
   opacity: 1;
   transition: all 0.5s ease;
-  width: 100%;
+  width: 90pt;
 }
 
 .letter {
   .letter-base();
-  transform: translate3d(0, -4px, 0);
-  .shadow(8px);
-  text-shadow: 0px 0px 20px white, 0px 0px 2px white;
+  transform: translate3d(0, -4pt, 0);
+  .shadow(8pt);
+  text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
   background-color: @color2;
 
   &:nth-of-type(2) {
-    margin-left: 5px;
-    margin-right: 5px;
+    margin-left: 5pt;
+    margin-right: 5pt;
   }
 
   &:focus {
-    border: solid 2px @color1;
+    border: solid 2pt @color1;
   }
 
   &.disabled {
@@ -162,7 +147,7 @@ h1 {
   &.wrong {
     animation: shake 0.62s cubic-bezier(.36,.07,.19,.97) both;
     background-color: @color5;
-    perspective: 1000px;
+    perspective: 1000pt;
   }
 
   &.wrong, &.disabled, &.unfocused, &.correct {
@@ -187,10 +172,12 @@ h1 {
 }
 
 .shadow(@offset) {
-  box-shadow: 0 @offset 6px -6px black;
+  box-shadow: 0 @offset 6pt -6pt black;
 }
 
 .attributation {
+  display: block;
+  height: 10pt;
   color: @color-grey;
 }
 
@@ -210,18 +197,18 @@ h1 {
 
 @keyframes shake {
   20%, 90% {
-    transform: rotate(5deg) translate3d(-1px, 0, 0);
+    transform: rotate(5deg) translate3d(-1pt, 0, 0);
   }
   
   20%, 80% {
-    transform: rotate(-5deg) translate3d(2px, 0, 0);
+    transform: rotate(-5deg) translate3d(2pt, 0, 0);
   }
 
   30%, 50%, 70% {
-    transform: rotate(5deg) translate3d(-4px, 0, 0);
+    transform: rotate(5deg) translate3d(-4pt, 0, 0);
   }
 
   40%, 60% {
-    transform: rotate(-5deg) translate3d(4px, 0, 0);
+    transform: rotate(-5deg) translate3d(4pt, 0, 0);
   }
 }
