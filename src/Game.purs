@@ -41,7 +41,7 @@ data Action
   | NextGame (Maybe Letter)
 
 type Model = 
-  { game :: Game -- TODO add field for next game
+  { game :: Game
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
   }
