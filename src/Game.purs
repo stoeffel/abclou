@@ -8,7 +8,6 @@ import Letter (Letter)
 import Sounds as Sounds
 import Sounds (Sounds)
 
-import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
@@ -42,6 +41,10 @@ data Action
   | SelectLetter Letter
   | NextGame (Maybe Letter)
   | GoTo Page
+  | SettingsAction SettingsAction
+
+data SettingsAction
+  = SettingsNoOp
 
 data Page
   = GamePage
@@ -99,6 +102,9 @@ update action model = case action of
   NextGame letter -> do
     game <- nextGame letter model.letters 
     pure model { game = game }
+  SettingsAction settingsAction ->
+    case settingsAction of
+      SettingsNoOp -> pure model
 
 nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
 nextGame lastAnswer letters = do
@@ -130,7 +136,7 @@ view { game: Settings } =
   layout
     { backPage: GamePage
     , title: PageTitle "Settings"
-    , content: [ viewSettings ] 
+    , content: [ SettingsAction <$> viewSettings ] 
     , additionalClass: Nothing
     }
 view { game: AbcLou quiz, sounds } = 
@@ -164,19 +170,11 @@ layout ::
 layout { additionalClass, title, content, backPage } =
   D.div [ P.classList [ Just "app", additionalClass ] ] 
     [ D.div [ P.className "container" ] 
-        $ A.concat
-          [ [ viewTitle title ]
-          , content
-          , [ D.small
-                [ P.className "attributation" ]
-                [ D.text "Graphics by J. Moffitt"
-                , D.text " / "
-                , D.text "Code @ github.com/stoeffel/abclou"
-                ]
-            , pure (GoTo backPage) <* D.button
-                [ P.onClick, P.className "settings-button" ]
-                [ D.text "Settings" ]
-            ]
+        $ [ viewTitle title ]
+       <> content
+       <> [ pure (GoTo backPage) <* D.button
+              [ P.onClick, P.className "settings-button" ]
+              [ D.text "Settings" ]
           ]
     ]
 
@@ -187,7 +185,7 @@ data Title
 
 viewTitle :: forall a. Title -> Widget HTML a
 viewTitle title =
-  D.h1 [P.classList [maybeStar]] [ D.text titleText ]
+  D.h1 [P.classList [maybeStar]] [ D.text $ S.toUpper titleText ]
   where
     titleText = case title of
       AppTitle -> "ABC LOU"
@@ -207,8 +205,21 @@ viewLoading = liftAff load <|> D.text "..."
       liftEffect $ Keyboard.startListening
       pure (Loaded sounds)
 
-viewSettings :: Widget HTML Action
-viewSettings = pure (GoTo GamePage) <* D.text "Settings"
+viewSettings :: Widget HTML SettingsAction
+viewSettings =
+  pure SettingsNoOp <* viewSettings'
+  where
+    viewSettings' =
+      D.ul []
+        [ D.li [] [ D.text "Graphics by J. Moffitt" ]
+        , D.li []
+            [ D.a
+              [ P.href "https://github.com/stoeffel/abclou"
+              , P.target "_blank"
+              ]
+              [ D.text "Code @ github.com/stoeffel/abclou" ]
+            ]
+        ]
 
 viewQuiz :: Quiz -> Sounds -> Widget HTML Action
 viewQuiz quiz sounds = do
