@@ -64,6 +64,10 @@ data PageId
   = AbcLouPage
   | SettingsPage
 
+instance pageIdShow :: Show PageId where
+  show AbcLouPage = "AbcLouPage"
+  show SettingsPage = "SettingsPage"
+
 type Nav = Routing.PushStateInterface
 
 pages :: Routing.Match PageId
@@ -245,7 +249,7 @@ layout ::
   }
   -> Widget HTML Action
 layout { additionalClass, title, content, backPage } =
-  D.div [ P.classList [ Just "app", additionalClass ] ] 
+  D.div [ P.classList [ Just "app", additionalClass ], P.key $ show backPage ] 
     [ D.div [ P.className "container" ] 
         $ [ viewTitle title ]
        <> content
@@ -292,7 +296,7 @@ viewSettings { soundIsEnabled }=
   viewSettings'
   where
     viewSettings' =
-      D.div []
+      D.div [ P.className "settings-content" ]
         [ ToggleSound <$ D.input 
             [ P._type "checkbox"
             , P.name "sound"
@@ -305,7 +309,7 @@ viewSettings { soundIsEnabled }=
                 Enabled -> "Sound on"
                 Disabled -> "Sound off"
             ]
-        , D.ul [ P.className "settings-page" ]
+        , D.ul [ P.className "settings-info" ]
             [ D.li [] [ D.text "Graphics by J. Moffitt" ]
             , D.li []
                 [ D.a
