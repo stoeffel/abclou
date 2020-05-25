@@ -25,7 +25,6 @@ import Record (merge)
 
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Console (log)
 import Effect.Aff.Class (liftAff)
 import Effect.Aff (Aff)
 import Effect.Aff as Aff
@@ -107,7 +106,6 @@ main :: Effect Unit
 main = do
   nav <- Routing.makeInterface
   run <- nav.listen \{pathname} -> do
-    log pathname
     _ <- nav # Routing.matches pages \_ -> runApp nav 
     pure unit
   _ <- nav # Routing.matches pages \_ -> runApp nav 
