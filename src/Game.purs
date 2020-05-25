@@ -64,15 +64,9 @@ pages =
     , pure AbcLouPage
     ] <* Routing.end
 
-class IsPage a where
-  documentTitle :: a -> String
-  url :: a -> String
-
-instance pageIsPage :: IsPage Page where
-  documentTitle AbcLouPage = "ABCLOU"
-  documentTitle SettingsPage = "ABCLOU - Settings"
-  url AbcLouPage = "/"
-  url SettingsPage = "/settings"
+pageURL :: Page -> String
+pageURL AbcLouPage = "/"
+pageURL SettingsPage = "/settings"
 
 type Model = 
   { game :: Game
@@ -127,7 +121,7 @@ update nav action model = case action of
       AbcLouPage -> update nav (NextGame Nothing) model
       SettingsPage -> pure model { game = Settings }
   GoTo page -> do
-    nav.pushState (unsafeToForeign {}) $ url page
+    nav.pushState (unsafeToForeign {}) $ pageURL page
     case page of
       AbcLouPage -> update nav (NextGame Nothing) model
       SettingsPage -> pure model { game = Settings }
