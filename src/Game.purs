@@ -8,12 +8,16 @@ import Letter (Letter)
 import Sounds as Sounds
 import Sounds (Sounds)
 
+import Data.Argonaut.Core as Argonaut
+import Data.Argonaut.Decode as Argonaut.Decode
+import Data.Argonaut.Encode as Argonaut.Encode
+import Data.Argonaut.Parser as Argonaut.Parser
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
 import Data.Foldable (oneOf)
 import Data.Functor.Extra (updateIf)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
 import Foreign (unsafeToForeign)
@@ -24,6 +28,7 @@ import Control.Monad.Loops (iterateUntil)
 import Record (merge)
 
 import Effect (Effect)
+import Effect.Console (log)
 import Effect.Class (liftEffect)
 import Effect.Aff.Class (liftAff)
 import Effect.Aff (Aff)
@@ -41,42 +46,46 @@ import Routing (match) as Routing
 import Routing.PushState (makeInterface, matches, PushStateInterface) as Routing
 import Routing.Match (Match, lit, end, root) as Routing
 
+import Web.HTML as Web
+import Web.HTML.Window as Window
+import Web.Storage.Storage as Storage
+
 data Action
-  = Loaded { sounds :: Sounds, page :: Page }
+  = Loaded { sounds :: Sounds, page :: PageId, settings :: Settings }
   | SelectLetter Letter
-  | NextGame (Maybe Letter)
-  | GoTo Page
+  | NextQuiz (Maybe Letter)
+  | GoTo PageId
   | SettingsAction SettingsAction
 
 data SettingsAction
   = ToggleSound
 
-data Page
+data PageId
   = AbcLouPage
   | SettingsPage
 
 type Nav = Routing.PushStateInterface
 
-pages :: Routing.Match Page
+pages :: Routing.Match PageId
 pages =
   Routing.root *> oneOf
     [ SettingsPage <$ Routing.lit "settings"
     , pure AbcLouPage
     ] <* Routing.end
 
-pageURL :: Page -> String
+pageURL :: PageId -> String
 pageURL AbcLouPage = "/"
 pageURL SettingsPage = "/settings"
 
 type Model = 
-  { game :: Game
+  { page :: Page
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
   , settings :: Settings
   }
 
-data Game 
-  = Loading Page
+data Page 
+  = Loading PageId
   | AbcLou Quiz
   | Settings
 
@@ -87,6 +96,17 @@ type Settings =
 data IsEnabled = Enabled | Disabled
 
 derive instance isEnabledEq :: Eq IsEnabled
+
+instance decodeJsonIsEnabled :: Argonaut.Decode.DecodeJson IsEnabled where
+  decodeJson = Right <<< Argonaut.caseJsonString Enabled
+    ( case _ of
+        "Enabled" -> Enabled
+        _ -> Disabled
+    )
+
+instance encodeJsonIsEnabled :: Argonaut.Encode.EncodeJson IsEnabled where
+  encodeJson Enabled = Argonaut.Encode.encodeJson "Enabled"
+  encodeJson Disabled = Argonaut.Encode.encodeJson "Disabled"
 
 data Attempt
   = First
@@ -102,13 +122,16 @@ type Quiz =
   , attempt :: Attempt 
   }
 
-initialState :: Page -> Model
+initialState :: PageId -> Model
 initialState page =
-  { game: Loading page
+  { page: Loading page
   , letters: Letter.all
   , sounds: Sounds.def
-  , settings: { soundIsEnabled: Enabled }
+  , settings: defSettings
   }
+
+defSettings :: Settings
+defSettings = { soundIsEnabled: Enabled }
 
 main :: Effect Unit
 main = do
@@ -130,48 +153,51 @@ render nav model = do
 
 update :: Nav -> Action -> Model -> Effect Model
 update nav action model = case action of
-  Loaded {page, sounds} ->
+  Loaded {page, sounds, settings} ->
+    let newModel = model { sounds = sounds, settings = settings } in
     case page of
-      AbcLouPage -> update nav (NextGame Nothing) model { sounds = sounds }
-      SettingsPage -> pure model { game = Settings }
-  GoTo page ->
-    case page of
-      AbcLouPage -> update nav (NextGame Nothing) model
-      SettingsPage -> pure model { game = Settings }
+      AbcLouPage -> update nav (NextQuiz Nothing) newModel
+      SettingsPage -> pure newModel { page = Settings }
+  GoTo page -> do
+    nav.pushState (unsafeToForeign {}) $ pageURL page
+    pure model
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
-  NextGame letter -> do
-    game <- nextGame letter model.letters 
-    pure model { game = game }
-  SettingsAction settingsAction ->
-    case settingsAction of
-      ToggleSound -> pure model 
-        { settings = model.settings
-            { soundIsEnabled =
-              if model.settings.soundIsEnabled == Enabled then
-                Disabled
-              else
-                Enabled
-            }
-        }
+  NextQuiz letter -> do
+    page <- nextPage letter model.letters 
+    pure model { page = page }
+  SettingsAction settingsAction -> do
+    let newModel = 
+          case settingsAction of
+            ToggleSound -> model 
+              { settings = model.settings
+                  { soundIsEnabled =
+                    case model.settings.soundIsEnabled of
+                      Enabled -> Disabled
+                      Disabled -> Enabled
+                  }
+              }
+    let json = Argonaut.stringify $ Argonaut.Encode.encodeJson newModel.settings
+    Storage.setItem "abclou-settings" json =<< Window.localStorage =<< Web.window
+    pure newModel
 
 
-nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
-nextGame lastAnswer letters = do
+nextPage :: Maybe Letter -> NonEmptyArray Letter -> Effect Page
+nextPage lastAnswer letters = do
   quizData <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
       (Letter.random letters)
   pure $ AbcLou $ merge quizData {attempt: First}
 
 answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, game : AbcLou quiz }
+answeredCorrectly answer model@{ letters, page : AbcLou quiz }
   | Letter.sameLetter quiz.correct answer = model 
-      { game = AbcLou quiz { attempt = Correct quiz.correct }
+      { page = AbcLou quiz { attempt = Correct quiz.correct }
       , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
       }
   | otherwise = 
       model
         { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
-        , game = AbcLou quiz 
+        , page = AbcLou quiz 
             { attempt = case quiz.attempt of
               First -> Second answer
               Second firstAnswer -> Third firstAnswer answer
@@ -181,15 +207,15 @@ answeredCorrectly answer model@{ letters, game : AbcLou quiz }
 answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
-view { game: Loading page } = Loaded <<< merge { page } <$> viewLoading 
-view { game: Settings, settings } = 
+view { page: Loading page } = Loaded <<< merge { page } <$> viewLoading 
+view { page: Settings, settings } = 
   layout
     { backPage: AbcLouPage
     , title: PageTitle "Settings"
     , content: [ SettingsAction <$> viewSettings settings ] 
     , additionalClass: Nothing
     }
-view { game: AbcLou quiz, sounds, settings } = 
+view { page: AbcLou quiz, sounds, settings } = 
   let soundPlayer = mkSoundPlayer sounds settings.soundIsEnabled in
   layout
     $ merge { backPage: SettingsPage }
@@ -213,7 +239,7 @@ view { game: AbcLou quiz, sounds, settings } =
 
 layout :: 
   { additionalClass :: Maybe String
-  , backPage :: Page
+  , backPage :: PageId
   , content :: Array (Widget HTML Action)
   , title :: Title
   }
@@ -247,14 +273,19 @@ viewTitle title =
       PageTitle _ -> Just "page-title"
       CorrectTitle _ -> Just "correct-star"
 
-viewLoading :: Widget HTML {sounds :: Sounds}
+viewLoading :: Widget HTML {sounds :: Sounds, settings :: Settings}
 viewLoading = liftAff load <|> D.text "..."
   where
-    load :: Aff {sounds :: Sounds}
+    load :: Aff {sounds :: Sounds, settings :: Settings}
     load = do
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
-      pure {sounds}
+      maybeSettings <- liftEffect $ Storage.getItem "abclou-settings" =<< Window.localStorage =<< Web.window
+      let settings = 
+            case Argonaut.Decode.decodeJson =<< Argonaut.Parser.jsonParser (fromMaybe "" maybeSettings) of
+              Right s -> s
+              Left _ -> defSettings
+      pure {sounds, settings}
 
 viewSettings :: Settings -> Widget HTML SettingsAction
 viewSettings { soundIsEnabled }=
@@ -270,7 +301,10 @@ viewSettings { soundIsEnabled }=
             ]
         , D.label
             [ P.htmlFor "sound" ]
-            [ D.text "Sound on/off" ]
+            [ D.text $ case soundIsEnabled of
+                Enabled -> "Sound on"
+                Disabled -> "Sound off"
+            ]
         , D.ul [ P.className "settings-page" ]
             [ D.li [] [ D.text "Graphics by J. Moffitt" ]
             , D.li []
@@ -298,7 +332,7 @@ viewCorrect :: Letter -> SoundPlayer -> Widget HTML Action
 viewCorrect letter soundPlayer = do
   liftEffect $ soundPlayer Sounds.Tada
   liftAff delayed <|> viewWordImage letter
-  pure $ NextGame $ Just letter
+  pure $ NextQuiz $ Just letter
   where
     delayed :: Aff Unit
     delayed = Aff.delay (Milliseconds 3000.0)
