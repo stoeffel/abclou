@@ -10,6 +10,7 @@ import Sounds (Sounds)
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
+import Data.Either
 import Data.Foldable (oneOf)
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
@@ -37,6 +38,7 @@ import Concur.React.Props as P
 import Concur.React.Run (runWidgetInDom)
 
 import React.SyntheticEvent as R
+import Routing (match) as Routing
 import Routing.PushState (makeInterface, matches, PushStateInterface) as Routing
 import Routing.Match (Match, lit, end, root) as Routing
 
@@ -104,12 +106,16 @@ initialState page = { game: Loading page, letters: Letter.all, sounds: Sounds.de
 main :: Effect Unit
 main = do
   nav <- Routing.makeInterface
-  runPage <- nav # Routing.matches pages \_ page ->
-    runWidgetInDom "app" do
-      liftEffect $ log $ documentTitle page
+  run <- nav.listen \{pathname} -> do
+    log pathname
+    _ <- nav # Routing.matches pages \_ -> runApp nav 
+    pure unit
+  _ <- nav # Routing.matches pages \_ -> runApp nav 
+  run
+  where
+    runApp nav page = runWidgetInDom "app" do
       _ <- liftEffect CD.connectDevTools
       render nav (initialState page)
-  runPage
 
 render :: forall a. Nav -> Model -> Widget HTML a
 render nav model = do
@@ -119,7 +125,9 @@ render nav model = do
 update :: Nav -> Action -> Model -> Effect Model
 update nav action model = case action of
   Loaded {page, sounds} ->
-    update nav (GoTo page) model { sounds = sounds }
+    case page of
+      AbcLouPage -> update nav (NextGame Nothing) model
+      SettingsPage -> pure model { game = Settings }
   GoTo page -> do
     nav.pushState (unsafeToForeign {}) $ url page
     case page of
