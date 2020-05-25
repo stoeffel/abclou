@@ -132,7 +132,7 @@ update :: Nav -> Action -> Model -> Effect Model
 update nav action model = case action of
   Loaded {page, sounds} ->
     case page of
-      AbcLouPage -> update nav (NextGame Nothing) model
+      AbcLouPage -> update nav (NextGame Nothing) model { sounds = sounds }
       SettingsPage -> pure model { game = Settings }
   GoTo page ->
     case page of
@@ -364,5 +364,4 @@ type SoundPlayer = Sounds.Key -> Effect Unit
 
 mkSoundPlayer :: Sounds -> IsEnabled -> SoundPlayer
 mkSoundPlayer _ Disabled _ = pure unit
-mkSoundPlayer sounds Enabled key =
-  Sounds.play key sounds
+mkSoundPlayer sounds Enabled key = Sounds.play key sounds
