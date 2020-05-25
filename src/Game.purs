@@ -49,7 +49,7 @@ data Action
   | SettingsAction SettingsAction
 
 data SettingsAction
-  = SettingsNoOp
+  = ToggleSound
 
 data Page
   = AbcLouPage
@@ -72,12 +72,21 @@ type Model =
   { game :: Game
   , letters :: NonEmptyArray Letter
   , sounds :: Sounds
+  , settings :: Settings
   }
 
 data Game 
   = Loading Page
   | AbcLou Quiz
   | Settings
+
+type Settings =
+  { soundIsEnabled :: IsEnabled
+  }
+
+data IsEnabled = Enabled | Disabled
+
+derive instance isEnabledEq :: Eq IsEnabled
 
 data Attempt
   = First
@@ -94,7 +103,12 @@ type Quiz =
   }
 
 initialState :: Page -> Model
-initialState page = { game: Loading page, letters: Letter.all, sounds: Sounds.def }
+initialState page =
+  { game: Loading page
+  , letters: Letter.all
+  , sounds: Sounds.def
+  , settings: { soundIsEnabled: Enabled }
+  }
 
 main :: Effect Unit
 main = do
@@ -120,8 +134,7 @@ update nav action model = case action of
     case page of
       AbcLouPage -> update nav (NextGame Nothing) model
       SettingsPage -> pure model { game = Settings }
-  GoTo page -> do
-    nav.pushState (unsafeToForeign {}) $ pageURL page
+  GoTo page ->
     case page of
       AbcLouPage -> update nav (NextGame Nothing) model
       SettingsPage -> pure model { game = Settings }
@@ -132,7 +145,16 @@ update nav action model = case action of
     pure model { game = game }
   SettingsAction settingsAction ->
     case settingsAction of
-      SettingsNoOp -> pure model
+      ToggleSound -> pure model 
+        { settings = model.settings
+            { soundIsEnabled =
+              if model.settings.soundIsEnabled == Enabled then
+                Disabled
+              else
+                Enabled
+            }
+        }
+
 
 nextGame :: Maybe Letter -> NonEmptyArray Letter -> Effect Game
 nextGame lastAnswer letters = do
@@ -160,20 +182,21 @@ answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
 view { game: Loading page } = Loaded <<< merge { page } <$> viewLoading 
-view { game: Settings } = 
+view { game: Settings, settings } = 
   layout
     { backPage: AbcLouPage
     , title: PageTitle "Settings"
-    , content: [ SettingsAction <$> viewSettings ] 
+    , content: [ SettingsAction <$> viewSettings settings ] 
     , additionalClass: Nothing
     }
-view { game: AbcLou quiz, sounds } = 
+view { game: AbcLou quiz, sounds, settings } = 
+  let soundPlayer = mkSoundPlayer sounds settings.soundIsEnabled in
   layout
     $ merge { backPage: SettingsPage }
     $ case quiz.attempt of
         Correct letter ->
           { content: 
-              [ viewCorrect letter sounds
+              [ viewCorrect letter soundPlayer
               , viewLetters quiz
               ]
           , title: CorrectTitle letter
@@ -181,7 +204,7 @@ view { game: AbcLou quiz, sounds } =
           }
         _ ->
           { content:
-              [ viewQuiz quiz sounds
+              [ viewQuiz quiz soundPlayer
               , viewLetters quiz
               ]
           , title: AppTitle
@@ -233,36 +256,47 @@ viewLoading = liftAff load <|> D.text "..."
       liftEffect $ Keyboard.startListening
       pure {sounds}
 
-viewSettings :: Widget HTML SettingsAction
-viewSettings =
-  pure SettingsNoOp <* viewSettings'
+viewSettings :: Settings -> Widget HTML SettingsAction
+viewSettings { soundIsEnabled }=
+  viewSettings'
   where
     viewSettings' =
-      D.ul [ P.className "settings-page" ]
-        [ D.li [] [ D.text "Graphics by J. Moffitt" ]
-        , D.li []
-            [ D.a
-              [ P.href "https://github.com/stoeffel/abclou"
-              , P.target "_blank"
-              ]
-              [ D.text "Code @ github.com/stoeffel/abclou" ]
+      D.div []
+        [ ToggleSound <$ D.input 
+            [ P._type "checkbox"
+            , P.name "sound"
+            , P.checked (soundIsEnabled == Enabled)
+            , P.onChange
+            ]
+        , D.label
+            [ P.htmlFor "sound" ]
+            [ D.text "Sound on/off" ]
+        , D.ul [ P.className "settings-page" ]
+            [ D.li [] [ D.text "Graphics by J. Moffitt" ]
+            , D.li []
+                [ D.a
+                  [ P.href "https://github.com/stoeffel/abclou"
+                  , P.target "_blank"
+                  ]
+                  [ D.text "Code @ github.com/stoeffel/abclou" ]
+                ]
             ]
         ]
 
-viewQuiz :: Quiz -> Sounds -> Widget HTML Action
-viewQuiz quiz sounds = do
+viewQuiz :: Quiz -> SoundPlayer -> Widget HTML Action
+viewQuiz quiz soundPlayer = do
   if quiz.attempt /= First then
-    liftEffect $ Sounds.play Sounds.Nope sounds
+    liftEffect $ soundPlayer Sounds.Nope
   else 
     pure unit
   case Letter.sound quiz.correct of
-    Just sound -> liftEffect $ Sounds.play sound sounds
+    Just sound -> liftEffect $ soundPlayer sound
     Nothing -> pure unit
   viewWordImage quiz.correct
 
-viewCorrect :: Letter -> Sounds -> Widget HTML Action
-viewCorrect letter sounds = do
-  liftEffect $ Sounds.play Sounds.Tada sounds
+viewCorrect :: Letter -> SoundPlayer -> Widget HTML Action
+viewCorrect letter soundPlayer = do
+  liftEffect $ soundPlayer Sounds.Tada
   liftAff delayed <|> viewWordImage letter
   pure $ NextGame $ Just letter
   where
@@ -325,3 +359,10 @@ viewLetter attempt letter = do
         pure unit
       else
         onLetterPress
+
+type SoundPlayer = Sounds.Key -> Effect Unit
+
+mkSoundPlayer :: Sounds -> IsEnabled -> SoundPlayer
+mkSoundPlayer _ Disabled _ = pure unit
+mkSoundPlayer sounds Enabled key =
+  Sounds.play key sounds
