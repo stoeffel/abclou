@@ -8,6 +8,7 @@ import Letter (Letter)
 import Sounds as Sounds
 import Sounds (Sounds)
 
+import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Functor.Extra (updateIf)
@@ -40,6 +41,11 @@ data Action
   = Loaded Sounds
   | SelectLetter Letter
   | NextGame (Maybe Letter)
+  | GoTo Page
+
+data Page
+  = GamePage
+  | SettingsPage
 
 type Model = 
   { game :: Game
@@ -50,6 +56,7 @@ type Model =
 data Game 
   = Loading
   | AbcLou Quiz
+  | Settings
 
 data Attempt
   = First
@@ -83,6 +90,10 @@ update :: Action -> Model -> Effect Model
 update action model = case action of
   Loaded sounds ->
     update (NextGame Nothing) model { sounds = sounds }
+  GoTo page ->
+    case page of
+      GamePage -> update (NextGame Nothing) model
+      SettingsPage -> pure model { game = Settings }
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
   NextGame letter -> do
@@ -115,36 +126,63 @@ answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
 view { game: Loading } = viewLoading 
+view { game: Settings } = 
+  layout
+    { backPage: GamePage
+    , title: PageTitle "Settings"
+    , content: [ viewSettings ] 
+    , additionalClass: Nothing
+    }
 view { game: AbcLou quiz, sounds } = 
-  D.div [ P.classList [ Just "app", maybeCorrectClass ] ] 
-    [ D.div [ P.className "container" ] 
-      [ viewTitle title
-      , content
-      , viewLetters quiz
-      , D.small
-          [ P.className "attributation" ]
-          [ D.text "Graphics by J. Moffitt"
-          , D.text " / "
-          , D.text "Code @ github.com/stoeffel/abclou"
-          ]
-      ]
-    ]
-  where
-    {content, title, maybeCorrectClass} =
-      case quiz.attempt of
+  layout
+    $ merge { backPage: SettingsPage }
+    $ case quiz.attempt of
         Correct letter ->
-          { content: viewCorrect letter sounds
+          { content: 
+              [ viewCorrect letter sounds
+              , viewLetters quiz
+              ]
           , title: CorrectTitle letter
-          , maybeCorrectClass: Just "correct"
+          , additionalClass: Just "correct"
           }
         _ ->
-          { content: viewQuiz quiz sounds
+          { content:
+              [ viewQuiz quiz sounds
+              , viewLetters quiz
+              ]
           , title: AppTitle
-          , maybeCorrectClass: Nothing
+          , additionalClass: Nothing
           }
+
+layout :: 
+  { additionalClass :: Maybe String
+  , backPage :: Page
+  , content :: Array (Widget HTML Action)
+  , title :: Title
+  }
+  -> Widget HTML Action
+layout { additionalClass, title, content, backPage } =
+  D.div [ P.classList [ Just "app", additionalClass ] ] 
+    [ D.div [ P.className "container" ] 
+        $ A.concat
+          [ [ viewTitle title ]
+          , content
+          , [ D.small
+                [ P.className "attributation" ]
+                [ D.text "Graphics by J. Moffitt"
+                , D.text " / "
+                , D.text "Code @ github.com/stoeffel/abclou"
+                ]
+            , pure (GoTo backPage) <* D.button
+                [ P.onClick, P.className "settings-button" ]
+                [ D.text "Settings" ]
+            ]
+          ]
+    ]
 
 data Title
   = AppTitle
+  | PageTitle String
   | CorrectTitle Letter
 
 viewTitle :: forall a. Title -> Widget HTML a
@@ -153,9 +191,11 @@ viewTitle title =
   where
     titleText = case title of
       AppTitle -> "ABC LOU"
+      PageTitle str -> str
       CorrectTitle letter -> Letter.word letter
     maybeStar = case title of
       AppTitle -> Nothing
+      PageTitle _ -> Just "page-title"
       CorrectTitle _ -> Just "correct-star"
 
 viewLoading :: Widget HTML Action
@@ -166,6 +206,9 @@ viewLoading = liftAff load <|> D.text "..."
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
       pure (Loaded sounds)
+
+viewSettings :: Widget HTML Action
+viewSettings = pure (GoTo GamePage) <* D.text "Settings"
 
 viewQuiz :: Quiz -> Sounds -> Widget HTML Action
 viewQuiz quiz sounds = do
