@@ -10,10 +10,12 @@ import Sounds (Sounds)
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
+import Data.Foldable (oneOf)
 import Data.Functor.Extra (updateIf)
 import Data.Maybe (Maybe(..))
 import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
+import Foreign (unsafeToForeign)
 
 import Control.Alt ((<|>))
 import Control.Monad.Loops (iterateUntil)
@@ -22,6 +24,7 @@ import Record (merge)
 
 import Effect (Effect)
 import Effect.Class (liftEffect)
+import Effect.Console (log)
 import Effect.Aff.Class (liftAff)
 import Effect.Aff (Aff)
 import Effect.Aff as Aff
@@ -34,10 +37,11 @@ import Concur.React.Props as P
 import Concur.React.Run (runWidgetInDom)
 
 import React.SyntheticEvent as R
-
+import Routing.PushState (makeInterface, matches, PushStateInterface) as Routing
+import Routing.Match (Match, lit, end, root) as Routing
 
 data Action
-  = Loaded Sounds
+  = Loaded { sounds :: Sounds, page :: Page }
   | SelectLetter Letter
   | NextGame (Maybe Letter)
   | GoTo Page
@@ -47,8 +51,27 @@ data SettingsAction
   = SettingsNoOp
 
 data Page
-  = GamePage
+  = AbcLouPage
   | SettingsPage
+
+type Nav = Routing.PushStateInterface
+
+pages :: Routing.Match Page
+pages =
+  Routing.root *> oneOf
+    [ SettingsPage <$ Routing.lit "settings"
+    , pure AbcLouPage
+    ] <* Routing.end
+
+class IsPage a where
+  documentTitle :: a -> String
+  url :: a -> String
+
+instance pageIsPage :: IsPage Page where
+  documentTitle AbcLouPage = "ABCLOU"
+  documentTitle SettingsPage = "ABCLOU - Settings"
+  url AbcLouPage = "/"
+  url SettingsPage = "/settings"
 
 type Model = 
   { game :: Game
@@ -57,7 +80,7 @@ type Model =
   }
 
 data Game 
-  = Loading
+  = Loading Page
   | AbcLou Quiz
   | Settings
 
@@ -75,27 +98,32 @@ type Quiz =
   , attempt :: Attempt 
   }
 
-initialState :: Model
-initialState = { game: Loading, letters: Letter.all, sounds: Sounds.def }
+initialState :: Page -> Model
+initialState page = { game: Loading page, letters: Letter.all, sounds: Sounds.def }
 
 main :: Effect Unit
-main =
-  runWidgetInDom "app" $ do
-    _ <- liftEffect CD.connectDevTools
-    render initialState
+main = do
+  nav <- Routing.makeInterface
+  runPage <- nav # Routing.matches pages \_ page ->
+    runWidgetInDom "app" do
+      liftEffect $ log $ documentTitle page
+      _ <- liftEffect CD.connectDevTools
+      render nav (initialState page)
+  runPage
 
-render :: forall a. Model -> Widget HTML a
-render model = do
+render :: forall a. Nav -> Model -> Widget HTML a
+render nav model = do
   action <- view model
-  render =<< liftEffect (update action model)
+  render nav =<< liftEffect (update nav action model)
 
-update :: Action -> Model -> Effect Model
-update action model = case action of
-  Loaded sounds ->
-    update (NextGame Nothing) model { sounds = sounds }
-  GoTo page ->
+update :: Nav -> Action -> Model -> Effect Model
+update nav action model = case action of
+  Loaded {page, sounds} ->
+    update nav (GoTo page) model { sounds = sounds }
+  GoTo page -> do
+    nav.pushState (unsafeToForeign {}) $ url page
     case page of
-      GamePage -> update (NextGame Nothing) model
+      AbcLouPage -> update nav (NextGame Nothing) model
       SettingsPage -> pure model { game = Settings }
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
@@ -131,10 +159,10 @@ answeredCorrectly answer model@{ letters, game : AbcLou quiz }
 answeredCorrectly _ model = model
 
 view :: Model -> Widget HTML Action
-view { game: Loading } = viewLoading 
+view { game: Loading page } = Loaded <<< merge { page } <$> viewLoading 
 view { game: Settings } = 
   layout
-    { backPage: GamePage
+    { backPage: AbcLouPage
     , title: PageTitle "Settings"
     , content: [ SettingsAction <$> viewSettings ] 
     , additionalClass: Nothing
@@ -196,21 +224,21 @@ viewTitle title =
       PageTitle _ -> Just "page-title"
       CorrectTitle _ -> Just "correct-star"
 
-viewLoading :: Widget HTML Action
+viewLoading :: Widget HTML {sounds :: Sounds}
 viewLoading = liftAff load <|> D.text "..."
   where
-    load :: Aff Action
+    load :: Aff {sounds :: Sounds}
     load = do
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
-      pure (Loaded sounds)
+      pure {sounds}
 
 viewSettings :: Widget HTML SettingsAction
 viewSettings =
   pure SettingsNoOp <* viewSettings'
   where
     viewSettings' =
-      D.ul []
+      D.ul [ P.className "settings-page" ]
         [ D.li [] [ D.text "Graphics by J. Moffitt" ]
         , D.li []
             [ D.a

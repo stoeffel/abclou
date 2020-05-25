@@ -15,6 +15,7 @@ You can edit this file as you like.
   , "profunctor-lenses"
   , "psci-support"
   , "random"
+  , "routing"
   , "test-unit"
   , "webaudio"
   ]
