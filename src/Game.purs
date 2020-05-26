@@ -9,9 +9,9 @@ import Sounds as Sounds
 import Sounds (Sounds)
 
 import Data.Argonaut.Core as Argonaut
-import Data.Argonaut.Decode as Argonaut.Decode
-import Data.Argonaut.Encode as Argonaut.Encode
-import Data.Argonaut.Parser as Argonaut.Parser
+import Data.Argonaut.Decode as Decode
+import Data.Argonaut.Encode as Encode
+import Data.Argonaut.Parser as Parser
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
@@ -101,16 +101,16 @@ data IsEnabled = Enabled | Disabled
 
 derive instance isEnabledEq :: Eq IsEnabled
 
-instance decodeJsonIsEnabled :: Argonaut.Decode.DecodeJson IsEnabled where
+instance decodeJsonIsEnabled :: Decode.DecodeJson IsEnabled where
   decodeJson = Right <<< Argonaut.caseJsonString Enabled
     ( case _ of
         "Enabled" -> Enabled
         _ -> Disabled
     )
 
-instance encodeJsonIsEnabled :: Argonaut.Encode.EncodeJson IsEnabled where
-  encodeJson Enabled = Argonaut.Encode.encodeJson "Enabled"
-  encodeJson Disabled = Argonaut.Encode.encodeJson "Disabled"
+instance encodeJsonIsEnabled :: Encode.EncodeJson IsEnabled where
+  encodeJson Enabled = Encode.encodeJson "Enabled"
+  encodeJson Disabled = Encode.encodeJson "Disabled"
 
 data Attempt
   = First
@@ -181,10 +181,25 @@ update nav action model = case action of
                       Disabled -> Enabled
                   }
               }
-    let json = Argonaut.stringify $ Argonaut.Encode.encodeJson newModel.settings
-    Storage.setItem "abclou-settings" json =<< Window.localStorage =<< Web.window
+    storeItem StoreSettings newModel.settings
     pure newModel
 
+data StoreKey = StoreSettings | StoreQuiz
+
+instance storeKeyShow :: Show StoreKey where
+  show StoreSettings = "abclou-settings"
+  show StoreQuiz = "abclou-quiz"
+
+loadItem :: forall a. Decode.DecodeJson a => StoreKey -> a -> Effect a
+loadItem k def = do
+  json <- Storage.getItem (show k) =<< Window.localStorage =<< Web.window
+  let maybeV = hush <<< Decode.decodeJson =<< hush <<< Parser.jsonParser =<< json
+  pure $ fromMaybe def maybeV
+
+storeItem :: forall a. Encode.EncodeJson a => StoreKey -> a -> Effect Unit
+storeItem k x = do
+  let json = Argonaut.stringify $ Encode.encodeJson x
+  Storage.setItem (show k) json =<< Window.localStorage =<< Web.window
 
 nextPage :: Maybe Letter -> NonEmptyArray Letter -> Effect Page
 nextPage lastAnswer letters = do
@@ -284,11 +299,7 @@ viewLoading = liftAff load <|> D.text "..."
     load = do
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
-      maybeSettings <- liftEffect $ Storage.getItem "abclou-settings" =<< Window.localStorage =<< Web.window
-      let settings = 
-            case Argonaut.Decode.decodeJson =<< Argonaut.Parser.jsonParser (fromMaybe "" maybeSettings) of
-              Right s -> s
-              Left _ -> defSettings
+      settings <- liftEffect $ loadItem StoreSettings defSettings
       pure {sounds, settings}
 
 viewSettings :: Settings -> Widget HTML SettingsAction
