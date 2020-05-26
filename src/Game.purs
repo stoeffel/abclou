@@ -182,9 +182,9 @@ main = do
 render :: forall a. Nav -> Model -> Widget HTML a
 render nav model = do
   action <- view model
-  render nav =<< liftEffect (update nav action model)
+  render nav =<< liftAff (update nav action model)
 
-update :: Nav -> Action -> Model -> Effect Model
+update :: Nav -> Action -> Model -> Aff Model
 update nav action model = case action of
   Loaded {page, sounds, settings, maybeQuiz} ->
     let newModel = model { sounds = sounds, settings = settings } in
@@ -193,19 +193,20 @@ update nav action model = case action of
       { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
       { page: SettingsPage } -> pure newModel { page = Settings }
   GoTo page -> do
-    nav.pushState (write true) $ pageURL page
-    pure (initialState page)
+    liftEffect $ nav.pushState (write true) $ pageURL page
+    loadedData <- load
+    update nav (Loaded $ merge { page } loadedData) model
   SelectLetter letter -> 
     pure model
       { page = case model.page of
           AbcLou quiz -> AbcLou $ answeredCorrectly letter quiz
           p -> p
       }
-  NextQuiz previous -> do
+  NextQuiz previous -> liftEffect $ do
     quiz <- nextQuiz previous
     storeItem StoreQuiz $ Just quiz
     pure model { page = AbcLou quiz }
-  SettingsAction settingsAction -> do
+  SettingsAction settingsAction -> liftEffect $ do
     let newModel = 
           case settingsAction of
             ToggleSound -> model 
@@ -335,14 +336,14 @@ viewTitle title =
 
 viewLoading :: Widget HTML (LoadedData ())
 viewLoading = liftAff load <|> D.text ""
-  where
-    load :: Aff (LoadedData ())
-    load = do
-      sounds <- Sounds.load
-      liftEffect $ Keyboard.startListening
-      settings <- liftEffect $ loadItem StoreSettings defSettings
-      maybeQuiz <- liftEffect $ loadItem StoreQuiz Nothing
-      pure {sounds, settings, maybeQuiz}
+
+load :: Aff (LoadedData ())
+load = do
+  sounds <- Sounds.load
+  liftEffect $ Keyboard.startListening
+  settings <- liftEffect $ loadItem StoreSettings defSettings
+  maybeQuiz <- liftEffect $ loadItem StoreQuiz Nothing
+  pure {sounds, settings, maybeQuiz}
 
 viewSettings :: Settings -> Widget HTML SettingsAction
 viewSettings { soundIsEnabled }=
