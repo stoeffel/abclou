@@ -8,8 +8,6 @@ import Letter (Letter, Letters)
 import Sounds as Sounds
 import Sounds (Sounds)
 
-import Simple.JSON (read, write)
-
 import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Decode as Decode
 import Data.Argonaut.Decode ((.:))
@@ -170,14 +168,12 @@ defSettings = { soundIsEnabled: Enabled }
 main :: Effect Unit
 main = do
   nav <- Routing.makeInterface
-  run <- nav # Routing.matches pages \_ -> runApp nav 
-  _ <- nav.listen \location -> pure unit
-  run
-  where
-    runApp nav page = runWidgetInDom "app" do
+  run <- nav # Routing.matches pages \_ page -> 
+    runWidgetInDom "app" do
       liftEffect $ log "reload"
       _ <- liftEffect CD.connectDevTools
       render nav (initialState page)
+  run
 
 render :: forall a. Nav -> Model -> Widget HTML a
 render nav model = do
@@ -193,7 +189,7 @@ update nav action model = case action of
       { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
       { page: SettingsPage } -> pure newModel { page = Settings }
   GoTo page -> do
-    liftEffect $ nav.pushState (write true) $ pageURL page
+    liftEffect $ nav.pushState (unsafeToForeign {}) $ pageURL page
     loadedData <- load
     update nav (Loaded $ merge { page } loadedData) model
   SelectLetter letter -> 
