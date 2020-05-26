@@ -1,5 +1,6 @@
 module Letter 
   ( Letter
+  , Letters
   , all
   , character
   , word
@@ -38,6 +39,21 @@ import Data.Argonaut.Encode ((:=), (~>))
 
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
+
+newtype Letters = Letters (NonEmptyArray Letter)
+derive instance lettersNewtype :: Newtype Letters _
+
+instance decodeJsonLetters :: Decode.DecodeJson Letters where
+  decodeJson json = 
+    case Decode.decodeJson json of
+      Right x ->
+        case AN.fromArray x of
+          Just v -> Right $ wrap v
+          Nothing -> Left "Letters can't be empty"
+      Left err -> Left err
+
+instance encodeJsonLetters :: Encode.EncodeJson Letters where
+  encodeJson = Encode.encodeJson <<< AN.toArray <<< unwrap
 
 newtype Letter = Letter
   { word :: Word

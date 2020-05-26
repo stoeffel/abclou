@@ -4,7 +4,7 @@ import Prelude
 
 import Keyboard as Keyboard
 import Letter as Letter
-import Letter (Letter)
+import Letter (Letter, Letters)
 import Sounds as Sounds
 import Sounds (Sounds)
 
@@ -154,21 +154,6 @@ type Quiz =
   , attempt :: Attempt 
   , alphabet :: Letters
   }
-
-newtype Letters = Letters (NonEmptyArray Letter)
-derive instance lettersNewtype :: Newtype Letters _
-
-instance decodeJsonLetters :: Decode.DecodeJson Letters where
-  decodeJson json = 
-    case Decode.decodeJson json of
-      Right x ->
-        case AN.fromArray x of
-          Just v -> Right $ wrap v
-          Nothing -> Left "Letters can't be empty"
-      Left err -> Left err
-
-instance encodeJsonLetters :: Encode.EncodeJson Letters where
-  encodeJson = Encode.encodeJson <<< AN.toArray <<< unwrap
 
 initialState :: PageId -> Model
 initialState page =
