@@ -319,7 +319,12 @@ layout { additionalClass, title, content, backPage } =
         $ [ viewTitle title ]
        <> content
        <> [ pure (GoTo backPage) <* D.button
-              [ P.onClick, P.className "settings-button" ]
+              [ P.onClick
+              , P.classList
+                [ Just "navigaton-button"
+                , Just $ show backPage
+                ]
+              ]
               []
           ]
     ]
@@ -343,7 +348,7 @@ viewTitle title =
       CorrectTitle _ -> Just "correct-star"
 
 viewLoading :: Widget HTML (LoadedData ())
-viewLoading = liftAff load <|> D.text "..."
+viewLoading = liftAff load <|> D.text ""
   where
     load :: Aff (LoadedData ())
     load = do

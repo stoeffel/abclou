@@ -126,18 +126,24 @@ h1 {
   margin: 0px;
 }
 
-.settings-button {
+.navigaton-button {
   position: absolute;
   top: 0px;
-  right: 0px;
+  left: 0px;
   display: inline;
-  background: url(../assets/settings.svg);
-  background-size: cover;
   height: 4em;
   width: 4em;
   margin: 0px;
   padding: 0px;
   border: none;
+  &.AbcLouPage {
+    background: url(../assets/info.svg);
+    background-size: cover;
+  }
+  &.SettingsPage {
+    background: url(../assets/settings.svg);
+    background-size: cover;
+  }
 }
 
 .word-image-container {
