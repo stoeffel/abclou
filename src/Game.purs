@@ -182,8 +182,8 @@ render nav model = do
 
 update :: Nav -> Action -> Model -> Aff Model
 update nav action model = case action of
-  Loaded {page, sounds, settings, maybeQuiz} ->
-    let newModel = model { sounds = sounds, settings = settings } in
+  Loaded {page, sounds, settings, maybeQuiz} -> do
+    let newModel = model { sounds = sounds, settings = settings }
     case {page, maybeQuiz} of
       { page: AbcLouPage, maybeQuiz: Nothing } -> update nav (NextQuiz Nothing) newModel
       { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
@@ -202,19 +202,15 @@ update nav action model = case action of
     quiz <- nextQuiz previous
     storeItem StoreQuiz $ Just quiz
     pure model { page = AbcLou quiz }
-  SettingsAction settingsAction -> liftEffect $ do
-    let newModel = 
-          case settingsAction of
-            ToggleSound -> model 
-              { settings = model.settings
-                  { soundIsEnabled =
-                    case model.settings.soundIsEnabled of
-                      Enabled -> Disabled
-                      Disabled -> Enabled
-                  }
-              }
-    storeItem StoreSettings newModel.settings
-    pure newModel
+  SettingsAction ToggleSound -> liftEffect $ do
+    let settings = model.settings
+          { soundIsEnabled =
+            case model.settings.soundIsEnabled of
+              Enabled -> Disabled
+              Disabled -> Enabled
+          }
+    storeItem StoreSettings settings
+    pure model { settings = settings }
 
 data StoreKey = StoreSettings | StoreQuiz
 
@@ -243,20 +239,28 @@ nextQuiz maybePrev = do
   pure {attempt: First, correct, letters: wrap letters, alphabet}
 
 answeredCorrectly :: Letter -> Quiz -> Quiz
-answeredCorrectly answer quiz
-  | Letter.sameLetter quiz.correct answer = 
-      quiz 
-        { attempt = Correct quiz.correct
-        , alphabet = wrap $ updateIf quiz.correct (Letter.adjustFrequency (-2.0)) $ unwrap quiz.alphabet 
+answeredCorrectly answer quiz =
+  let
+    { attempt, frequency } =
+      if Letter.sameLetter quiz.correct answer then 
+        { attempt: Correct quiz.correct
+        , frequency: -1.0
         }
-  | otherwise = 
-      quiz 
-        { attempt = case quiz.attempt of
+      else
+        { attempt: case quiz.attempt of
             First -> Second answer
             Second firstAnswer -> Third firstAnswer answer
             a -> a
-        , alphabet = wrap $ updateIf quiz.correct (Letter.adjustFrequency 5.0) $ unwrap quiz.alphabet
+        , frequency: 2.0
         }
+  in
+    quiz 
+      { attempt = attempt
+      , alphabet = wrap
+          $ updateIf quiz.correct 
+            (Letter.adjustFrequency frequency)
+          $ unwrap quiz.alphabet
+      }
 
 view :: Model -> Widget HTML Action
 view { page: Loading page } = Loaded <<< merge { page } <$> viewLoading 

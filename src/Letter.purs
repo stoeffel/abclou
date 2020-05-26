@@ -112,7 +112,7 @@ sound (Letter letter) = letter.sound
 
 adjustFrequency :: Number -> Letter -> Letter
 adjustFrequency delta (Letter a') =
-  Letter a' { frequency = clamp 1.0 5.0 $ a'.frequency + delta }
+  Letter a' { frequency = clamp 1.0 8.0 $ a'.frequency + delta }
 
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
 random x' = do
