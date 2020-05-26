@@ -25,6 +25,9 @@ import Affjax.ResponseFormat as ARF
 import Audio.WebAudio.AudioBufferSourceNode as WA
 import Audio.WebAudio.BaseAudioContext as WB
 import Audio.WebAudio.Types as WT
+import Data.Argonaut.Core as Argonaut
+import Data.Argonaut.Decode as Decode
+import Data.Argonaut.Encode as Encode
 
 
 type Sounds = Map Key Sound
@@ -40,6 +43,24 @@ data Key
 
 derive instance soundTypesEq :: Eq Key
 derive instance soundTypesOrd :: Ord Key
+
+instance soundTypesShow :: Show Key where
+  show Tada = "Tada"
+  show Nope = "Nope"
+  show Quack = "Quack"
+  show Xylophone = "Xylophone"
+
+instance decodeJsonKey :: Decode.DecodeJson Key where
+  decodeJson = Right <<< Argonaut.caseJsonString Tada
+    ( case _ of
+        "Tada" -> Tada
+        "Nope" -> Nope
+        "Quack" -> Quack
+        _ -> Xylophone
+    )
+
+instance encodeJsonKey :: Encode.EncodeJson Key where
+  encodeJson = Encode.encodeJson <<< show
 
 data Sound = Sound WT.AudioContext WT.AudioBuffer
 

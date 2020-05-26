@@ -10,13 +10,16 @@ import Sounds (Sounds)
 
 import Data.Argonaut.Core as Argonaut
 import Data.Argonaut.Decode as Decode
+import Data.Argonaut.Decode ((.:))
 import Data.Argonaut.Encode as Encode
+import Data.Argonaut.Encode ((:=), (~>))
 import Data.Argonaut.Parser as Parser
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
 import Data.Foldable (oneOf)
 import Data.Functor.Extra (updateIf)
+import Data.Newtype
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as S
 import Data.Time.Duration (Milliseconds(..))
@@ -51,11 +54,13 @@ import Web.HTML.Window as Window
 import Web.Storage.Storage as Storage
 
 data Action
-  = Loaded { sounds :: Sounds, page :: PageId, settings :: Settings }
+  = Loaded (LoadedData ( page :: PageId ))
   | SelectLetter Letter
   | NextQuiz (Maybe Letter)
   | GoTo PageId
   | SettingsAction SettingsAction
+
+type LoadedData a = {sounds :: Sounds, settings :: Settings, maybeQuiz :: Maybe Quiz | a}
 
 data SettingsAction
   = ToggleSound
@@ -83,7 +88,7 @@ pageURL SettingsPage = "/settings"
 
 type Model = 
   { page :: Page
-  , letters :: NonEmptyArray Letter
+  , letters :: Letters
   , sounds :: Sounds
   , settings :: Settings
   }
@@ -120,16 +125,55 @@ data Attempt
 
 derive instance attemptsEq :: Eq Attempt
 
+instance decodeJsonAttempt :: Decode.DecodeJson Attempt where
+  decodeJson json = do
+     x <- Decode.decodeJson json
+     attempt <- x .: "attempt"
+     case attempt of
+       "first" -> pure First
+       "second" -> do
+          l <- x .: "letter"
+          pure $ Second l
+       "third" -> do
+          l <- x .: "letter1"
+          m <- x .: "letter2"
+          pure $ Third l m
+       "correct" -> do
+          l <- x .: "letter"
+          pure $ Correct l
+       _ -> Left "Unknown attempt"
+
+instance encodeJsonAttempt :: Encode.EncodeJson Attempt where
+  encodeJson First = "attempt" := "first" ~> Argonaut.jsonEmptyObject
+  encodeJson (Second l) = "attempt" := "second" ~> "letter" := l ~> Argonaut.jsonEmptyObject
+  encodeJson (Third l m) = "attempt" := "third" ~> "letter1" := l ~> "letter2" := m ~> Argonaut.jsonEmptyObject
+  encodeJson (Correct l) = "attempt" := "correct" ~> "letter" := l ~> Argonaut.jsonEmptyObject
+
 type Quiz =
   { correct :: Letter
-  , letters :: NonEmptyArray Letter
+  , letters :: Letters
   , attempt :: Attempt 
   }
+
+newtype Letters = Letters (NonEmptyArray Letter)
+derive instance lettersNewtype :: Newtype Letters _
+
+instance decodeJsonLetters :: Decode.DecodeJson Letters where
+  decodeJson json = 
+    case Decode.decodeJson json of
+      Right x ->
+        case AN.fromArray x of
+          Just v -> Right $ wrap v
+          Nothing -> Left "Letters can't be empty"
+      Left err -> Left err
+
+instance encodeJsonLetters :: Encode.EncodeJson Letters where
+  encodeJson = Encode.encodeJson <<< AN.toArray <<< unwrap
 
 initialState :: PageId -> Model
 initialState page =
   { page: Loading page
-  , letters: Letter.all
+  , letters: wrap Letter.all
   , sounds: Sounds.def
   , settings: defSettings
   }
@@ -157,19 +201,21 @@ render nav model = do
 
 update :: Nav -> Action -> Model -> Effect Model
 update nav action model = case action of
-  Loaded {page, sounds, settings} ->
+  Loaded {page, sounds, settings, maybeQuiz} ->
     let newModel = model { sounds = sounds, settings = settings } in
-    case page of
-      AbcLouPage -> update nav (NextQuiz Nothing) newModel
-      SettingsPage -> pure newModel { page = Settings }
+    case {page, maybeQuiz} of
+      { page: AbcLouPage, maybeQuiz: Nothing } -> update nav (NextQuiz Nothing) newModel
+      { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
+      { page: SettingsPage } -> pure newModel { page = Settings }
   GoTo page -> do
     nav.pushState (unsafeToForeign {}) $ pageURL page
     pure model
   SelectLetter letter -> 
     pure $ answeredCorrectly letter model
   NextQuiz letter -> do
-    page <- nextPage letter model.letters 
-    pure model { page = page }
+    quiz <- nextQuiz letter model.letters 
+    storeItem StoreQuiz $ Just quiz
+    pure model { page = AbcLou quiz }
   SettingsAction settingsAction -> do
     let newModel = 
           case settingsAction of
@@ -201,21 +247,21 @@ storeItem k x = do
   let json = Argonaut.stringify $ Encode.encodeJson x
   Storage.setItem (show k) json =<< Window.localStorage =<< Web.window
 
-nextPage :: Maybe Letter -> NonEmptyArray Letter -> Effect Page
-nextPage lastAnswer letters = do
-  quizData <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
-      (Letter.random letters)
-  pure $ AbcLou $ merge quizData {attempt: First}
+nextQuiz :: Maybe Letter -> Letters -> Effect Quiz
+nextQuiz lastAnswer letters = do
+  {correct, letters} <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
+      (Letter.random $ unwrap letters)
+  pure {attempt: First, correct, letters: wrap letters}
 
 answeredCorrectly :: Letter -> Model -> Model
 answeredCorrectly answer model@{ letters, page : AbcLou quiz }
   | Letter.sameLetter quiz.correct answer = model 
       { page = AbcLou quiz { attempt = Correct quiz.correct }
-      , letters = updateIf quiz.correct (Letter.adjustFrequency (-2.0)) letters 
+      , letters = wrap $ updateIf quiz.correct (Letter.adjustFrequency (-2.0)) $ unwrap letters 
       }
   | otherwise = 
       model
-        { letters = updateIf quiz.correct (Letter.adjustFrequency 5.0) letters
+        { letters = wrap $ updateIf quiz.correct (Letter.adjustFrequency 5.0) $ unwrap letters
         , page = AbcLou quiz 
             { attempt = case quiz.attempt of
               First -> Second answer
@@ -292,15 +338,16 @@ viewTitle title =
       PageTitle _ -> Just "page-title"
       CorrectTitle _ -> Just "correct-star"
 
-viewLoading :: Widget HTML {sounds :: Sounds, settings :: Settings}
+viewLoading :: Widget HTML (LoadedData ())
 viewLoading = liftAff load <|> D.text "..."
   where
-    load :: Aff {sounds :: Sounds, settings :: Settings}
+    load :: Aff (LoadedData ())
     load = do
       sounds <- Sounds.load
       liftEffect $ Keyboard.startListening
       settings <- liftEffect $ loadItem StoreSettings defSettings
-      pure {sounds, settings}
+      maybeQuiz <- liftEffect $ loadItem StoreQuiz Nothing
+      pure {sounds, settings, maybeQuiz}
 
 viewSettings :: Settings -> Widget HTML SettingsAction
 viewSettings { soundIsEnabled }=
@@ -369,7 +416,7 @@ viewLetters {attempt, letters} =
   D.ul [ P.className "letters" ]
     $ AN.toArray
     $ viewLetter attempt
-   <$> letters
+   <$> unwrap letters
 
 viewLetter :: Attempt -> Letter -> Widget HTML Action
 viewLetter attempt letter = do

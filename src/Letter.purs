@@ -19,34 +19,74 @@ import Sounds as Sounds
 
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
+import Data.Either
 import Data.Foldable as F
 import Data.Maybe as M
 import Data.Maybe (Maybe(..))
+import Data.Newtype
 import Data.String as S
 import Data.String.NonEmpty as SN
 import Data.String.NonEmpty.CodeUnits as SNC
 import Data.String.CodeUnits as SCU
 import Data.Symbol (SProxy(..))
 import Data.Tuple (Tuple(..))
+import Data.Argonaut.Core as Argonaut
+import Data.Argonaut.Decode as Decode
+import Data.Argonaut.Decode ((.:), (.:?))
+import Data.Argonaut.Encode as Encode
+import Data.Argonaut.Encode ((:=), (~>))
 
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
 
 newtype Letter = Letter
-  { word :: SN.NonEmptyString
+  { word :: Word
   , asset :: Assets.Asset
   , frequency :: Number
   , sound :: Maybe Sounds.Key
   }
 
+newtype Word = Word SN.NonEmptyString
+derive instance wordEq :: Eq Word
+derive instance wordNewtype :: Newtype Word _
+
 instance letterEq :: Eq Letter where
   eq (Letter a) (Letter b) = a.word == b.word
 
+instance decodeJsonLetter :: Decode.DecodeJson Letter where
+  decodeJson json = do
+    x <- Decode.decodeJson json
+    word <- x .: "word"
+    asset <- x .: "asset"
+    frequency <- x .: "frequency"
+    sound <- x .: "sound"
+    pure $ Letter { word, asset, frequency, sound }
+
+instance encodeJsonLetter :: Encode.EncodeJson Letter where
+  encodeJson (Letter x) =
+    "word" := x.word 
+    ~> "asset" := x.asset 
+    ~> "frequency" := x.frequency
+    ~> "sound" := x.sound
+    ~> Argonaut.jsonEmptyObject
+
+instance decodeJsonWord :: Decode.DecodeJson Word where
+  decodeJson json = 
+    case Decode.decodeJson json of
+      Right x ->
+        case SN.fromString x of
+          Just v -> Right $ wrap v
+          Nothing -> Left "Word can't be empty"
+      Left err -> Left err
+
+instance encodeJsonWord :: Encode.EncodeJson Word where
+  encodeJson = Encode.encodeJson <<< SN.toString <<< unwrap
+
 character :: Letter -> String
-character (Letter letter) = SCU.singleton (SNC.uncons letter.word).head
+character (Letter letter) = SCU.singleton (SNC.uncons $ unwrap letter.word).head
 
 word :: Letter -> String
-word (Letter letter) = S.toUpper $ SN.toString letter.word
+word (Letter letter) = S.toUpper $ SN.toString $ unwrap letter.word
 
 asset :: Letter -> String
 asset (Letter letter) = Assets.for letter.asset
@@ -164,4 +204,4 @@ z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train Nothing
 
 mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.Key -> Letter
 mkLetter word' asset' sound' = Letter
-  { word: word' , asset: asset' , frequency: 1.0, sound: sound' }
+  { word: wrap word' , asset: asset' , frequency: 1.0, sound: sound' }
