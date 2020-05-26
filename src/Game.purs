@@ -46,7 +46,6 @@ import Concur.React.Props as P
 import Concur.React.Run (runWidgetInDom)
 
 import React.SyntheticEvent as R
-import Routing (match) as Routing
 import Routing.PushState (makeInterface, matches, PushStateInterface) as Routing
 import Routing.Match (Match, lit, end, root) as Routing
 
@@ -321,7 +320,7 @@ layout { additionalClass, title, content, backPage } =
        <> content
        <> [ pure (GoTo backPage) <* D.button
               [ P.onClick, P.className "settings-button" ]
-              [ D.text "Settings" ]
+              []
           ]
     ]
 
@@ -362,7 +361,8 @@ viewSettings { soundIsEnabled }=
       D.div [ P.className "settings-content" ]
         [ ToggleSound <$ D.input 
             [ P._type "checkbox"
-            , P.name "sound"
+            , P._id "sound"
+            , P.className "sound"
             , P.checked (soundIsEnabled == Enabled)
             , P.onChange
             ]
@@ -372,15 +372,16 @@ viewSettings { soundIsEnabled }=
                 Enabled -> "Sound on"
                 Disabled -> "Sound off"
             ]
+        , D.h3 [] [ D.text "Info" ]
         , D.ul [ P.className "settings-info" ]
-            [ D.li [] [ D.text "Graphics by J. Moffitt" ]
-            , D.li []
+            [ D.li []
                 [ D.a
                   [ P.href "https://github.com/stoeffel/abclou"
                   , P.target "_blank"
                   ]
                   [ D.text "Code @ github.com/stoeffel/abclou" ]
                 ]
+            , D.li [] [ D.text "Graphics by J. Moffitt" ]
             ]
         ]
 
