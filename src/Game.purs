@@ -26,6 +26,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Foreign (unsafeToForeign)
 
 import Control.Alt ((<|>))
+import Control.Apply (lift2)
 import Control.Monad.Loops (iterateUntil)
 
 import Record (merge)
@@ -56,7 +57,7 @@ import Web.Storage.Storage as Storage
 data Action
   = Loaded (LoadedData ( page :: PageId ))
   | SelectLetter Letter
-  | NextQuiz (Maybe Letter)
+  | NextQuiz (Maybe Quiz)
   | GoTo PageId
   | SettingsAction SettingsAction
 
@@ -88,7 +89,6 @@ pageURL SettingsPage = "/settings"
 
 type Model = 
   { page :: Page
-  , letters :: Letters
   , sounds :: Sounds
   , settings :: Settings
   }
@@ -153,6 +153,7 @@ type Quiz =
   { correct :: Letter
   , letters :: Letters
   , attempt :: Attempt 
+  , alphabet :: Letters
   }
 
 newtype Letters = Letters (NonEmptyArray Letter)
@@ -173,7 +174,6 @@ instance encodeJsonLetters :: Encode.EncodeJson Letters where
 initialState :: PageId -> Model
 initialState page =
   { page: Loading page
-  , letters: wrap Letter.all
   , sounds: Sounds.def
   , settings: defSettings
   }
@@ -211,9 +211,13 @@ update nav action model = case action of
     nav.pushState (unsafeToForeign {}) $ pageURL page
     pure model
   SelectLetter letter -> 
-    pure $ answeredCorrectly letter model
-  NextQuiz letter -> do
-    quiz <- nextQuiz letter model.letters 
+    pure model
+      { page = case model.page of
+          AbcLou quiz -> AbcLou $ answeredCorrectly letter quiz
+          p -> p
+      }
+  NextQuiz previous -> do
+    quiz <- nextQuiz previous
     storeItem StoreQuiz $ Just quiz
     pure model { page = AbcLou quiz }
   SettingsAction settingsAction -> do
@@ -247,29 +251,30 @@ storeItem k x = do
   let json = Argonaut.stringify $ Encode.encodeJson x
   Storage.setItem (show k) json =<< Window.localStorage =<< Web.window
 
-nextQuiz :: Maybe Letter -> Letters -> Effect Quiz
-nextQuiz lastAnswer letters = do
-  {correct, letters} <- iterateUntil ((_ /= lastAnswer) <<< Just <<< _.correct)
-      (Letter.random $ unwrap letters)
-  pure {attempt: First, correct, letters: wrap letters}
+nextQuiz :: Maybe Quiz -> Effect Quiz
+nextQuiz maybePrev = do
+  let {alphabet, prevCorrect} = case maybePrev of
+        Just q -> {alphabet: q.alphabet, prevCorrect: Just q.correct}
+        Nothing -> {alphabet: wrap Letter.all, prevCorrect: Nothing}
+  {correct, letters} <- iterateUntil 
+    (not <<< fromMaybe false <<< lift2 Letter.sameLetter prevCorrect <<< Just <<< _.correct) (Letter.random $ unwrap alphabet)
+  pure {attempt: First, correct, letters: wrap letters, alphabet}
 
-answeredCorrectly :: Letter -> Model -> Model
-answeredCorrectly answer model@{ letters, page : AbcLou quiz }
-  | Letter.sameLetter quiz.correct answer = model 
-      { page = AbcLou quiz { attempt = Correct quiz.correct }
-      , letters = wrap $ updateIf quiz.correct (Letter.adjustFrequency (-2.0)) $ unwrap letters 
-      }
-  | otherwise = 
-      model
-        { letters = wrap $ updateIf quiz.correct (Letter.adjustFrequency 5.0) $ unwrap letters
-        , page = AbcLou quiz 
-            { attempt = case quiz.attempt of
-              First -> Second answer
-              Second firstAnswer -> Third firstAnswer answer
-              a -> a
-            }
+answeredCorrectly :: Letter -> Quiz -> Quiz
+answeredCorrectly answer quiz
+  | Letter.sameLetter quiz.correct answer = 
+      quiz 
+        { attempt = Correct quiz.correct
+        , alphabet = wrap $ updateIf quiz.correct (Letter.adjustFrequency (-2.0)) $ unwrap quiz.alphabet 
         }
-answeredCorrectly _ model = model
+  | otherwise = 
+      quiz 
+        { attempt = case quiz.attempt of
+            First -> Second answer
+            Second firstAnswer -> Third firstAnswer answer
+            a -> a
+        , alphabet = wrap $ updateIf quiz.correct (Letter.adjustFrequency 5.0) $ unwrap quiz.alphabet
+        }
 
 view :: Model -> Widget HTML Action
 view { page: Loading page } = Loaded <<< merge { page } <$> viewLoading 
@@ -287,7 +292,7 @@ view { page: AbcLou quiz, sounds, settings } =
     $ case quiz.attempt of
         Correct letter ->
           { content: 
-              [ viewCorrect letter soundPlayer
+              [ viewCorrect quiz soundPlayer
               , viewLetters quiz
               ]
           , title: CorrectTitle letter
@@ -390,11 +395,11 @@ viewQuiz quiz soundPlayer = do
     Nothing -> pure unit
   viewWordImage quiz.correct
 
-viewCorrect :: Letter -> SoundPlayer -> Widget HTML Action
-viewCorrect letter soundPlayer = do
+viewCorrect :: Quiz -> SoundPlayer -> Widget HTML Action
+viewCorrect quiz@{correct} soundPlayer = do
   liftEffect $ soundPlayer Sounds.Tada
-  liftAff delayed <|> viewWordImage letter
-  pure $ NextQuiz $ Just letter
+  liftAff delayed <|> viewWordImage correct
+  pure $ NextQuiz $ Just quiz
   where
     delayed :: Aff Unit
     delayed = Aff.delay (Milliseconds 3000.0)
