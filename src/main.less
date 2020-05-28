@@ -153,29 +153,9 @@ h1 {
   justify-content: center;
   .word-image {
     animation: appearing 0.62s ease-in-out;
-    max-width: 400pt;
     transition: all 0.5s ease;
-  }
-}
-
-.continue {
-  .nice-font();
-  .shadow(8pt);
-  background-color: @color2;
-  border-radius: @border-radius;
-  border: none;
-  box-sizing: border-box;
-  height: 150pt;
-  width: 150pt;
-  color: @color-black;
-  font-size: 5em;
-  opacity: 1;
-  text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
-  transform: translate3d(0, -4pt, 0);
-  transition: background-color, transform, box-shadow 0.5s ease;
-
-  &:hover {
-    animation: pressing 0.2s cubic-bezier(.36,.07,.19,.97) both;
+    width: 100%;
+    max-width: 400px;
   }
 }
 
@@ -184,11 +164,9 @@ h1 {
   padding: 0pt;
   margin: 0pt;
   margin-bottom: 10pt;
-  margin-left: 16pt;
-  margin-right: 16pt;
   justify-content: space-around;
   height: 80px;
-  width: 270pt;
+  width: 100%;
 }
 
 .letter-base {
@@ -202,7 +180,8 @@ h1 {
   max-height: 300pt;
   opacity: 1;
   transition: all 0.5s ease;
-  width: 90pt;
+  width: 100%;
+  text-align: center;
 }
 
 .letter {
@@ -212,8 +191,14 @@ h1 {
   text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
   background-color: @color2;
 
+  &:nth-of-type(1) {
+    margin-left: 5pt;
+  }
   &:nth-of-type(2) {
     margin-left: 5pt;
+    margin-right: 5pt;
+  }
+  &:nth-of-type(5) {
     margin-right: 5pt;
   }
 
