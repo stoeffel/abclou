@@ -10,8 +10,8 @@ import Effect.Aff (Aff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import React.SyntheticEvent as R
 
-
 foreign import startListening :: Effect Unit
+
 foreign import stopListening :: Effect Unit
 
 foreign import _awaitKey :: EffectFnAff R.SyntheticKeyboardEvent

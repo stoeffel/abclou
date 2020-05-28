@@ -1,4 +1,4 @@
-module Letter 
+module Letter
   ( Letter
   , Letters
   , all
@@ -10,14 +10,11 @@ module Letter
   , random
   , find
   , sameLetter
-  )
-  where
+  ) where
 
 import Prelude
-
 import Assets as Assets
 import Sounds as Sounds
-
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
@@ -36,34 +33,37 @@ import Data.Argonaut.Decode as Decode
 import Data.Argonaut.Decode ((.:), (.:?))
 import Data.Argonaut.Encode as Encode
 import Data.Argonaut.Encode ((:=), (~>))
-
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
 
-newtype Letters = Letters (NonEmptyArray Letter)
+newtype Letters
+  = Letters (NonEmptyArray Letter)
+
 derive instance lettersNewtype :: Newtype Letters _
 
 instance decodeJsonLetters :: Decode.DecodeJson Letters where
-  decodeJson json = 
-    case Decode.decodeJson json of
-      Right x ->
-        case AN.fromArray x of
-          Just v -> Right $ wrap v
-          Nothing -> Left "Letters can't be empty"
-      Left err -> Left err
+  decodeJson json = case Decode.decodeJson json of
+    Right x -> case AN.fromArray x of
+      Just v -> Right $ wrap v
+      Nothing -> Left "Letters can't be empty"
+    Left err -> Left err
 
 instance encodeJsonLetters :: Encode.EncodeJson Letters where
   encodeJson = Encode.encodeJson <<< AN.toArray <<< unwrap
 
-newtype Letter = Letter
+newtype Letter
+  = Letter
   { word :: Word
   , asset :: Assets.Asset
   , frequency :: Number
   , sound :: Maybe Sounds.Key
   }
 
-newtype Word = Word SN.NonEmptyString
+newtype Word
+  = Word SN.NonEmptyString
+
 derive instance wordEq :: Eq Word
+
 derive instance wordNewtype :: Newtype Word _
 
 instance letterEq :: Eq Letter where
@@ -80,20 +80,21 @@ instance decodeJsonLetter :: Decode.DecodeJson Letter where
 
 instance encodeJsonLetter :: Encode.EncodeJson Letter where
   encodeJson (Letter x) =
-    "word" := x.word 
-    ~> "asset" := x.asset 
-    ~> "frequency" := x.frequency
-    ~> "sound" := x.sound
-    ~> Argonaut.jsonEmptyObject
+    "word" := x.word
+      ~> "asset"
+      := x.asset
+      ~> "frequency"
+      := x.frequency
+      ~> "sound"
+      := x.sound
+      ~> Argonaut.jsonEmptyObject
 
 instance decodeJsonWord :: Decode.DecodeJson Word where
-  decodeJson json = 
-    case Decode.decodeJson json of
-      Right x ->
-        case SN.fromString x of
-          Just v -> Right $ wrap v
-          Nothing -> Left "Word can't be empty"
-      Left err -> Left err
+  decodeJson json = case Decode.decodeJson json of
+    Right x -> case SN.fromString x of
+      Just v -> Right $ wrap v
+      Nothing -> Left "Word can't be empty"
+    Left err -> Left err
 
 instance encodeJsonWord :: Encode.EncodeJson Word where
   encodeJson = Encode.encodeJson <<< SN.toString <<< unwrap
@@ -111,18 +112,18 @@ sound :: Letter -> Maybe Sounds.Key
 sound (Letter letter) = letter.sound
 
 adjustFrequency :: Number -> Letter -> Letter
-adjustFrequency delta (Letter a') =
-  Letter a' { frequency = clamp 1.0 8.0 $ a'.frequency + delta }
+adjustFrequency delta (Letter a') = Letter a' { frequency = clamp 1.0 8.0 $ a'.frequency + delta }
 
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
 random x' = do
-  letters <- M.fromMaybe (AN.singleton a)
-    <$> randomUniqElements 3 (withFrequency <$> x')
+  letters <-
+    M.fromMaybe (AN.singleton a)
+      <$> randomUniqElements 3 (withFrequency <$> x')
   correct <- randomWeighted (withFrequency <$> letters)
   pure { correct, letters }
 
 withFrequency :: Letter -> Tuple Number Letter
-withFrequency x'@(Letter {frequency}) = Tuple frequency x'
+withFrequency x'@(Letter { frequency }) = Tuple frequency x'
 
 find :: String -> NonEmptyArray Letter -> Maybe Letter
 find str = F.find ((_ == S.toUpper str) <<< character)
@@ -131,14 +132,35 @@ sameLetter :: Letter -> Letter -> Boolean
 sameLetter a' b' = character a' == character b'
 
 all :: NonEmptyArray Letter
-all = AN.cons' 
-    a $
-  [ b, c, d, e, f
-  , g, h, i, j, k
-  , l, m, n, o, p
-  , q, r, s, t, u
-  , v, w, x, y, z
-  ]
+all =
+  AN.cons'
+    a
+    $ [ b
+      , c
+      , d
+      , e
+      , f
+      , g
+      , h
+      , i
+      , j
+      , k
+      , l
+      , m
+      , n
+      , o
+      , p
+      , q
+      , r
+      , s
+      , t
+      , u
+      , v
+      , w
+      , x
+      , y
+      , z
+      ]
 
 a :: Letter
 a = mkLetter (SN.nes (SProxy :: SProxy "Aff")) Assets.monkey Nothing
@@ -219,5 +241,6 @@ z :: Letter
 z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train Nothing
 
 mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.Key -> Letter
-mkLetter word' asset' sound' = Letter
-  { word: wrap word' , asset: asset' , frequency: 1.0, sound: sound' }
+mkLetter word' asset' sound' =
+  Letter
+    { word: wrap word', asset: asset', frequency: 1.0, sound: sound' }

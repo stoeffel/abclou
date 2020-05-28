@@ -1,4 +1,4 @@
-module Assets 
+module Assets
   ( for
   , Asset
   , tada
@@ -42,10 +42,13 @@ import Data.Newtype
 
 foreign import forAsset :: String -> String
 
-newtype Asset = Asset String
+newtype Asset
+  = Asset String
 
 derive instance assetEq :: Eq Asset
+
 derive instance assetOrd :: Ord Asset
+
 derive instance assetNewtype :: Newtype Asset _
 
 instance decodeJsonAsset :: Decode.DecodeJson Asset where
@@ -65,7 +68,6 @@ nope = Asset "nope"
 
 correct :: Asset
 correct = Asset "correct"
-
 
 bear :: Asset
 bear = Asset "Bear"

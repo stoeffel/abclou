@@ -19,6 +19,7 @@
     "parcel-plugin-pwa-manifest": "^3.0.7",
     "parcel-plugin-sw-precache": "^1.1.2",
     "purescript": "^0.13.6",
+    "purty": "^6.2.0",
     "spago": "^0.15.2"
   },
   "dependencies": {
@@ -34,7 +35,9 @@
     "startURL": ".",
     "theme": "rgba(82, 75, 75, 0.1)",
     "display": "standalone",
-    "staticFileGlobs": [ "assets/*.png" ],
+    "staticFileGlobs": [
+      "assets/*.png"
+    ],
     "generateIconOptions": {
       "baseIcon": "./original-assets/Rocket.png",
       "sizes": [
