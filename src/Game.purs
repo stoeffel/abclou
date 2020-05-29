@@ -398,7 +398,20 @@ viewSettings { soundIsEnabled } = viewSettings'
                   ]
                   [ D.text "Code @ github.com/stoeffel/abclou" ]
               ]
-          , D.li [] [ D.text "Graphics by J. Moffitt" ]
+          , D.li []
+              [ D.a
+                  [ P.href "https://www.fiverr.com/jamesmoffittart"
+                  , P.target "_blank"
+                  ]
+                  [ D.text "Graphics by J. Moffitt" ]
+              ]
+          , D.li []
+              [ D.a
+                  [ P.href "https://www.fiverr.com/conania"
+                  , P.target "_blank"
+                  ]
+                  [ D.text "Icons by Canonia" ]
+              ]
           ]
       ]
 
