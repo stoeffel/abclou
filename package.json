@@ -37,8 +37,7 @@
     "display": "standalone",
     "staticFileGlobs": [
       "assets/*.png",
-      "assets/*.svg",
-      "src/*.less"
+      "assets/*.svg"
     ],
     "generateIconOptions": {
       "baseIcon": "./original-assets/Rocket.png",
