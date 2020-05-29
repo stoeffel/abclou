@@ -5,6 +5,8 @@ You can edit this file as you like.
 { name = "my-project"
 , dependencies =
   [ "affjax"
+  , "argonaut-codecs"
+  , "argonaut-core"
   , "concur-core"
   , "concur-react"
   , "console"
@@ -15,6 +17,8 @@ You can edit this file as you like.
   , "profunctor-lenses"
   , "psci-support"
   , "random"
+  , "routing"
+  , "simple-json"
   , "test-unit"
   , "webaudio"
   ]

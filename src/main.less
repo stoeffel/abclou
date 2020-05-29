@@ -32,18 +32,26 @@ html,body,#app {
   justify-content: center;
   flex-direction: row;
   width: 100%;
+  z-index: 1;
 }
 
 .container {
-  padding-top: 50pt;
   display: flex;
   align-items: center;
   flex-direction: column;
   align-items: center;
+  padding-top: 0px;
   padding-left: 5pt;
   padding-right: 5pt;
   padding-bottom: 5pt;
-  margin-bottom: 70pt;
+  margin-top: 5pt;
+  margin-bottom: 80pt;
+}
+
+@media all and (display-mode: fullscreen) {
+  .container {
+    padding-top: 50pt;
+  }
 }
 
 h1 {
@@ -65,6 +73,78 @@ h1 {
     z-index: 1;
     position: relative;
   }
+  &.page-title {
+    color: @color-black;
+  }
+}
+
+.settings-content {
+  height: 100%;
+  font-size: 1.5em;
+
+  .sound {
+    visibility: hidden;
+  }
+
+  .sound ~ label {
+    display: flex;
+    align-items: center;
+  }
+
+  .icon(@i) {
+    content: '';
+    background: url(@i);
+    background-size: contain;
+    background-repeat: no-repeat;
+    height: 2em;
+    width: 2em;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+  }
+
+  .sound ~ label:before {
+    .icon("../assets/close.svg");
+  }
+
+  .sound:checked ~ label:before {
+    .icon("../assets/sound-on.svg");
+  }
+
+  h3 {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  h3:after {
+    .icon("../assets/info.svg");
+  }
+}
+
+.settings-info {
+  margin: 0px;
+}
+
+.navigaton-button {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  display: inline;
+  height: 4em;
+  width: 4em;
+  margin: 0px;
+  padding: 0px;
+  border: none;
+  animation: appearing 0.62s ease-in-out;
+  &.AbcLouPage {
+    background: url(../assets/close.svg);
+    background-size: cover;
+  }
+  &.SettingsPage {
+    background: url(../assets/settings.svg);
+    background-size: cover;
+  }
 }
 
 .word-image-container {
@@ -74,29 +154,9 @@ h1 {
   justify-content: center;
   .word-image {
     animation: appearing 0.62s ease-in-out;
-    max-width: 400pt;
     transition: all 0.5s ease;
-  }
-}
-
-.continue {
-  .nice-font();
-  .shadow(8pt);
-  background-color: @color2;
-  border-radius: @border-radius;
-  border: none;
-  box-sizing: border-box;
-  height: 150pt;
-  width: 150pt;
-  color: @color-black;
-  font-size: 5em;
-  opacity: 1;
-  text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
-  transform: translate3d(0, -4pt, 0);
-  transition: background-color, transform, box-shadow 0.5s ease;
-
-  &:hover {
-    animation: pressing 0.2s cubic-bezier(.36,.07,.19,.97) both;
+    width: 100%;
+    max-width: 400px;
   }
 }
 
@@ -105,11 +165,9 @@ h1 {
   padding: 0pt;
   margin: 0pt;
   margin-bottom: 10pt;
-  margin-left: 16pt;
-  margin-right: 16pt;
   justify-content: space-around;
   height: 80px;
-  width: 270pt;
+  width: 100%;
 }
 
 .letter-base {
@@ -123,7 +181,8 @@ h1 {
   max-height: 300pt;
   opacity: 1;
   transition: all 0.5s ease;
-  width: 90pt;
+  width: 100%;
+  text-align: center;
 }
 
 .letter {
@@ -133,8 +192,14 @@ h1 {
   text-shadow: 0pt 0pt 20pt white, 0pt 0pt 2pt white;
   background-color: @color2;
 
+  &:nth-of-type(1) {
+    margin-left: 5pt;
+  }
   &:nth-of-type(2) {
     margin-left: 5pt;
+    margin-right: 5pt;
+  }
+  &:nth-of-type(5) {
     margin-right: 5pt;
   }
 

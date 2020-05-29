@@ -1,4 +1,4 @@
-module Assets 
+module Assets
   ( for
   , Asset
   , tada
@@ -35,13 +35,27 @@ module Assets
   ) where
 
 import Prelude
+import Data.Argonaut.Core as Argonaut
+import Data.Argonaut.Decode as Decode
+import Data.Argonaut.Encode as Encode
+import Data.Newtype
 
 foreign import forAsset :: String -> String
 
-data Asset = Asset String
+newtype Asset
+  = Asset String
 
 derive instance assetEq :: Eq Asset
+
 derive instance assetOrd :: Ord Asset
+
+derive instance assetNewtype :: Newtype Asset _
+
+instance decodeJsonAsset :: Decode.DecodeJson Asset where
+  decodeJson = map wrap <<< Decode.decodeJson
+
+instance encodeJsonAsset :: Encode.EncodeJson Asset where
+  encodeJson = Encode.encodeJson <<< unwrap
 
 for :: Asset -> String
 for (Asset name) = forAsset name
@@ -54,7 +68,6 @@ nope = Asset "nope"
 
 correct :: Asset
 correct = Asset "correct"
-
 
 bear :: Asset
 bear = Asset "Bear"

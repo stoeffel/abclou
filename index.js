@@ -21,6 +21,9 @@ function main () {
   */
 
   window.assets = Object.assign(assets, sounds);
+  window.addEventListener('popstate', function(event) {
+    window.location.reload();
+  });
   Main.main();
 }
 
