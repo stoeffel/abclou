@@ -36,9 +36,11 @@
     "theme": "rgba(82, 75, 75, 0.1)",
     "display": "standalone",
     "staticFileGlobs": [
-      "assets/*.png",
-      "assets/*.svg",
-      "src/*.less"
+      "**/*.png",
+      "**/*.svg",
+      "**/*.css",
+      "**/*.js",
+      "**/*.html"
     ],
     "generateIconOptions": {
       "baseIcon": "./original-assets/Rocket.png",
