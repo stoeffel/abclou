@@ -1,5 +1,6 @@
 module Game where
 
+import React.SyntheticEvent as SE
 import Prelude
 import Keyboard as Keyboard
 import Letter as Letter
@@ -472,15 +473,17 @@ viewLetter attempt letter = do
   pure $ SelectLetter letter
   where
   viewLetter' :: Widget HTML Unit
-  viewLetter' =
-    D.button
-      [ P.title (Letter.character letter)
-      , P.disabled (attemptToClass attempt letter /= Nothing)
-      , P._id (Letter.character letter)
-      , P.classList [ Just $ "letter", attemptToClass attempt letter ]
-      , unit <$ P.onClick
-      ]
-      [ D.text (Letter.character letter) ]
+  viewLetter' = do
+    ev <-
+      D.button
+        [ P.title (Letter.character letter)
+        , P.disabled (attemptToClass attempt letter /= Nothing)
+        , P._id (Letter.character letter)
+        , P.classList [ Just $ "letter", attemptToClass attempt letter ]
+        , P.onClick
+        ]
+        [ D.text (Letter.character letter) ]
+    liftEffect $ SE.preventDefault ev
 
   attemptToClass :: Attempt -> Letter -> Maybe String
   attemptToClass First _ = Nothing
