@@ -282,14 +282,14 @@ answeredCorrectly answer quiz =
       }
 
 view :: Model -> Widget HTML Action
-view { page: Loading page } = Loaded <<< merge { page } <$> viewLoading
+view { page: Loading page } = viewLoading page
 
 view { page: Settings, settings } =
   layout
-    { backPage: AbcLouPage
+    { backPage: Just AbcLouPage
     , title: PageTitle "Settings"
     , content: [ SettingsAction <$> viewSettings settings ]
-    , additionalClass: Nothing
+    , additionalClass: Just "settings-page"
     }
 
 view { page: AbcLou quiz, sounds, settings } =
@@ -297,7 +297,7 @@ view { page: AbcLou quiz, sounds, settings } =
     soundPlayer = mkSoundPlayer sounds settings.soundIsEnabled
   in
     layout
-      $ merge { backPage: SettingsPage }
+      $ merge { backPage: Just SettingsPage }
       $ case quiz.attempt of
           Correct letter ->
             { content:
@@ -318,26 +318,29 @@ view { page: AbcLou quiz, sounds, settings } =
 
 layout ::
   { additionalClass :: Maybe String
-  , backPage :: PageId
+  , backPage :: Maybe PageId
   , content :: Array (Widget HTML Action)
   , title :: Title
   } ->
   Widget HTML Action
 layout { additionalClass, title, content, backPage } =
-  D.div [ P.classList [ Just "app", additionalClass ], P.key $ show backPage ]
-    [ D.div [ P.className "container" ]
+  D.div [ P.classList [ Just "app", additionalClass ], P.key "main-layout" ]
+    [ D.div [ P.className "container", P.key "main-container" ]
         $ [ viewTitle title ]
         <> content
-        <> [ pure (GoTo backPage)
-              <* D.button
-                  [ P.onClick
-                  , P.classList
-                      [ Just "navigaton-button"
-                      , Just $ show backPage
+        <> case backPage of
+            Nothing -> []
+            Just backPage' ->
+              [ pure (GoTo backPage')
+                  <* D.button
+                      [ P.onClick
+                      , P.classList
+                          [ Just "navigaton-button"
+                          , Just $ show backPage'
+                          ]
                       ]
-                  ]
-                  []
-          ]
+                      []
+              ]
     ]
 
 data Title
@@ -358,8 +361,17 @@ viewTitle title = D.h1 [ P.classList [ maybeStar ] ] [ D.text $ S.toUpper titleT
     PageTitle _ -> Just "page-title"
     CorrectTitle _ -> Just "correct-star"
 
-viewLoading :: Widget HTML (LoadedData ())
-viewLoading = liftAff load <|> D.text ""
+viewLoading :: PageId -> Widget HTML Action
+viewLoading page =
+  ( Loaded <<< merge { page }
+      <$> liftAff load
+  )
+    <|> layout
+        { backPage: Nothing
+        , title: AppTitle
+        , content: []
+        , additionalClass: Nothing
+        }
 
 load :: Aff (LoadedData ())
 load = do

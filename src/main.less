@@ -23,9 +23,13 @@ html,body,#app {
 .app {
   min-height: 100vh;
   background-color: @color0;
-  transition: opacity, background-color 0.5s ease-in-out;
   &.correct {
+    transition: opacity, background-color 0.5s ease-in-out;
     background-color: rgba(4, 216, 78, 0.4);
+  }
+  &.settings-page {
+    transition: opacity, background-color 0.5s ease-in-out;
+    background-color: @color-grey;
   }
   display: flex;
   align-items: stretch;
@@ -124,7 +128,7 @@ h1 {
 .navigaton-button {
   position: absolute;
   top: 45px;
-  left: 0px;
+  right: 0px;
   display: inline;
   height: 4em;
   width: 4em;
