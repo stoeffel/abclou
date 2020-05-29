@@ -104,11 +104,11 @@ h1 {
   }
 
   .sound ~ label:before {
-    .icon("../assets/sounds-off.svg");
+    .icon("../assets/close.svg");
   }
 
   .sound:checked ~ label:before {
-    .icon("../assets/sounds-on.svg");
+    .icon("../assets/sound-on.svg");
   }
 
   h3 {
@@ -136,8 +136,9 @@ h1 {
   margin: 0px;
   padding: 0px;
   border: none;
+  animation: appearing 0.62s ease-in-out;
   &.AbcLouPage {
-    background: url(../assets/info.svg);
+    background: url(../assets/close.svg);
     background-size: cover;
   }
   &.SettingsPage {
