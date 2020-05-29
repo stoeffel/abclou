@@ -21,6 +21,7 @@ html,body,#app {
 }
 
 .app {
+  animation: fadein 0.42s ease-in-out;
   min-height: 100vh;
   background-color: @color0;
   &.correct {
@@ -256,6 +257,15 @@ h1 {
   100% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes fadein {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
