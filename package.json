@@ -26,19 +26,13 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
-  "sw-precache": {
-    "maximumFileSizeToCacheInBytes": 10485760
-  },
+  "sw-precache": {},
   "pwaManifest": {
     "name": "ABCLOU",
     "shortName": "ABCLOU",
     "startURL": ".",
     "theme": "rgba(82, 75, 75, 0.1)",
     "display": "standalone",
-    "staticFileGlobs": [
-      "assets/*.png",
-      "assets/*.svg"
-    ],
     "generateIconOptions": {
       "baseIcon": "./original-assets/Rocket.png",
       "sizes": [
