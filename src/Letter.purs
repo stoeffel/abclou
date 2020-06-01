@@ -10,6 +10,7 @@ module Letter
   , random
   , find
   , sameLetter
+  , characterFrequencies
   ) where
 
 import Prelude
@@ -130,6 +131,9 @@ find str = F.find ((_ == S.toUpper str) <<< character)
 
 sameLetter :: Letter -> Letter -> Boolean
 sameLetter a' b' = character a' == character b'
+
+characterFrequencies :: Letters -> NonEmptyArray { char :: String, freq :: Number }
+characterFrequencies (Letters ls) = (\l@(Letter { frequency }) -> { char: character l, freq: frequency }) <$> ls
 
 all :: NonEmptyArray Letter
 all =

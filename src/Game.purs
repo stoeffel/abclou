@@ -13,6 +13,7 @@ import Data.Argonaut.Decode ((.:))
 import Data.Argonaut.Encode as Encode
 import Data.Argonaut.Encode ((:=), (~>))
 import Data.Argonaut.Parser as Parser
+import Data.Array as A
 import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
@@ -74,7 +75,7 @@ type Model
 data Page
   = Loading PageId
   | AbcLou Quiz
-  | Settings
+  | Settings Quiz
 
 type Settings
   = { soundIsEnabled :: IsEnabled
@@ -168,7 +169,8 @@ update action model = case action of
     case { page, maybeQuiz } of
       { page: AbcLouPage, maybeQuiz: Nothing } -> update (NextQuiz Nothing) newModel
       { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
-      { page: SettingsPage } -> pure newModel { page = Settings }
+      { page: SettingsPage, maybeQuiz: Just quiz } -> pure newModel { page = Settings quiz }
+      { page: SettingsPage, maybeQuiz: Nothing } -> pure newModel
   GoTo page -> do
     loadedData <- load
     update (Loaded $ merge { page } loadedData) model
@@ -260,11 +262,11 @@ answeredCorrectly answer quiz =
 view :: Model -> Widget HTML Action
 view { page: Loading page } = viewLoading page
 
-view { page: Settings, settings } =
+view { page: Settings quiz, settings } =
   layout
     { backPage: Just AbcLouPage
     , title: PageTitle "Settings"
-    , content: [ SettingsAction <$> viewSettings settings ]
+    , content: [ SettingsAction <$> viewSettings settings quiz ]
     , additionalClass: Just "settings-page"
     }
 
@@ -362,8 +364,8 @@ load = do
   maybeQuiz <- liftEffect $ loadItem StoreQuiz Nothing
   pure { sounds, settings, maybeQuiz }
 
-viewSettings :: Settings -> Widget HTML SettingsAction
-viewSettings { soundIsEnabled } = viewSettings'
+viewSettings :: Settings -> Quiz -> Widget HTML SettingsAction
+viewSettings { soundIsEnabled } { alphabet } = viewSettings'
   where
   viewSettings' =
     D.div [ P.className "settings-content" ]
@@ -382,6 +384,14 @@ viewSettings { soundIsEnabled } = viewSettings'
                   Enabled -> "Sound on"
                   Disabled -> "Sound off"
           ]
+      , D.h3 [] [ D.text "Alphabet Frequencies" ]
+      , D.ul [ P.className "alphabet-frequency" ]
+          $ ( \{ char, freq } ->
+                D.li []
+                  [ D.text (char <> " (" <> show freq <> ")") ]
+            )
+          <$> AN.toArray
+              (Letter.characterFrequencies alphabet)
       , D.h3 [] [ D.text "Info" ]
       , D.ul [ P.className "settings-info" ]
           [ D.li []
