@@ -4,10 +4,10 @@ module Data.Functor.Extra
 
 import Prelude
 
-updateIf :: forall f a. Functor f => Eq a => a -> (a -> a) -> f a -> f a
-updateIf x f =
+updateIf :: forall f a. Functor f => (a -> Boolean) -> (a -> a) -> f a -> f a
+updateIf pred f =
   map \y ->
-    if y == x then
+    if pred y then
       f y
     else
       y

@@ -36,6 +36,7 @@ import Data.Argonaut.Encode as Encode
 import Data.Argonaut.Encode ((:=), (~>))
 import Effect (Effect)
 import Effect.Random.Extra (randomWeighted, randomUniqElements)
+import Data.Functor.Extra (updateIf)
 
 newtype Letters
   = Letters (NonEmptyArray Letter)
@@ -112,8 +113,14 @@ asset (Letter letter) = Assets.for letter.asset
 sound :: Letter -> Maybe Sounds.Key
 sound (Letter letter) = letter.sound
 
-adjustFrequency :: Number -> Letter -> Letter
-adjustFrequency delta (Letter a') = Letter a' { frequency = clamp 1.0 8.0 $ a'.frequency + delta }
+adjustFrequency :: (Number -> Number) -> (Letter -> Boolean) -> Letters -> Letters
+adjustFrequency f pred =
+  wrap
+    <<< updateIf pred (adjustFrequency' f)
+    <<< unwrap
+
+adjustFrequency' :: (Number -> Number) -> Letter -> Letter
+adjustFrequency' f (Letter a') = Letter a' { frequency = clamp 1.0 8.0 $ f a'.frequency }
 
 random :: NonEmptyArray Letter -> Effect { correct :: Letter, letters :: NonEmptyArray Letter }
 random x' = do

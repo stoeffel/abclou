@@ -18,7 +18,6 @@ import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as AN
 import Data.Either
 import Data.Foldable (oneOf)
-import Data.Functor.Extra (updateIf)
 import Data.Newtype
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as S
@@ -59,6 +58,7 @@ type LoadedData a
 
 data SettingsAction
   = ToggleSound
+  | ResetLetter
 
 data PageId
   = AbcLouPage
@@ -224,6 +224,18 @@ update nav action model = case action of
             }
       storeItem StoreSettings settings
       pure model { settings = settings }
+  SettingsAction ResetLetter -> case model.page of
+    Settings quiz ->
+      liftEffect do
+        let
+          newQuiz =
+            quiz
+              { alphabet =
+                Letter.adjustFrequency (const 2.0) (const true) quiz.alphabet
+              }
+        storeItem StoreQuiz $ Just newQuiz
+        pure model { page = Settings newQuiz }
+    _ -> pure model
 
 data StoreKey
   = StoreSettings
@@ -278,10 +290,7 @@ answeredCorrectly answer quiz =
     quiz
       { attempt = attempt
       , alphabet =
-        wrap
-          $ updateIf quiz.correct
-              (Letter.adjustFrequency frequency)
-          $ unwrap quiz.alphabet
+        Letter.adjustFrequency (_ + frequency) (Letter.sameLetter quiz.correct) quiz.alphabet
       }
 
 view :: Model -> Widget HTML Action
@@ -417,6 +426,13 @@ viewSettings { soundIsEnabled } { alphabet } = viewSettings'
             )
           <$> AN.toArray
               (Letter.characterFrequencies alphabet)
+      , ResetLetter
+          <$ D.button
+              [ P.title "reset frequencies"
+              , P.className "reset"
+              , P.onClick
+              ]
+              [ D.text "Reset" ]
       , D.h3 [] [ D.text "Info" ]
       , D.ul [ P.className "settings-info" ]
           [ D.li []
