@@ -237,7 +237,7 @@ answeredCorrectly answer quiz =
     { attempt, frequency } =
       if Letter.sameLetter quiz.correct answer then
         { attempt: Correct quiz.correct
-        , frequency: -1.0
+        , frequency: -0.5
         }
       else
         { attempt:
@@ -245,7 +245,7 @@ answeredCorrectly answer quiz =
               First -> Second answer
               Second firstAnswer -> Third firstAnswer answer
               a -> a
-        , frequency: 2.0
+        , frequency: 1.0
         }
   in
     quiz

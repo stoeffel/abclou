@@ -243,4 +243,4 @@ z = mkLetter (SN.nes (SProxy :: SProxy "Zug")) Assets.train Nothing
 mkLetter :: SN.NonEmptyString -> Assets.Asset -> Maybe Sounds.Key -> Letter
 mkLetter word' asset' sound' =
   Letter
-    { word: wrap word', asset: asset', frequency: 1.0, sound: sound' }
+    { word: wrap word', asset: asset', frequency: 2.0, sound: sound' }
