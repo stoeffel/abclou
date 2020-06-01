@@ -41,6 +41,8 @@ import Concur.React.DOM as D
 import Concur.React.Props as P
 import Concur.React.Run (runWidgetInDom)
 import React.SyntheticEvent as R
+import Routing.PushState (makeInterface, matches, PushStateInterface) as Routing
+import Routing.Match (Match, lit, end, root) as Routing
 import Web.HTML as Web
 import Web.HTML.Window as Window
 import Web.Storage.Storage as Storage
@@ -65,6 +67,23 @@ data PageId
 instance pageIdShow :: Show PageId where
   show AbcLouPage = "AbcLouPage"
   show SettingsPage = "SettingsPage"
+
+type Nav
+  = Routing.PushStateInterface
+
+pages :: Routing.Match PageId
+pages =
+  Routing.root
+    *> oneOf
+        [ SettingsPage <$ Routing.lit "settings"
+        , pure AbcLouPage
+        ]
+    <* Routing.end
+
+pageURL :: PageId -> String
+pageURL AbcLouPage = "/"
+
+pageURL SettingsPage = "/settings"
 
 type Model
   = { page :: Page
@@ -150,30 +169,36 @@ defSettings :: Settings
 defSettings = { soundIsEnabled: Enabled }
 
 main :: Effect Unit
-main =
-  runWidgetInDom "app" do
-    liftEffect $ log "reload"
-    _ <- liftEffect CD.connectDevTools
-    render (initialState AbcLouPage)
+main = do
+  nav <- Routing.makeInterface
+  run <-
+    nav
+      # Routing.matches pages \_ page ->
+          runWidgetInDom "app" do
+            liftEffect $ log "reload"
+            _ <- liftEffect CD.connectDevTools
+            render nav (initialState page)
+  run
 
-render :: forall a. Model -> Widget HTML a
-render model = do
+render :: forall a. Nav -> Model -> Widget HTML a
+render nav model = do
   action <- view model
-  render =<< liftAff (update action model)
+  render nav =<< liftAff (update nav action model)
 
-update :: Action -> Model -> Aff Model
-update action model = case action of
+update :: Nav -> Action -> Model -> Aff Model
+update nav action model = case action of
   Loaded { page, sounds, settings, maybeQuiz } -> do
     let
       newModel = model { sounds = sounds, settings = settings }
     case { page, maybeQuiz } of
-      { page: AbcLouPage, maybeQuiz: Nothing } -> update (NextQuiz Nothing) newModel
+      { page: AbcLouPage, maybeQuiz: Nothing } -> update nav (NextQuiz Nothing) newModel
       { page: AbcLouPage, maybeQuiz: Just quiz } -> pure newModel { page = AbcLou quiz }
       { page: SettingsPage, maybeQuiz: Just quiz } -> pure newModel { page = Settings quiz }
       { page: SettingsPage, maybeQuiz: Nothing } -> pure newModel
   GoTo page -> do
+    liftEffect $ nav.pushState (unsafeToForeign {}) $ pageURL page
     loadedData <- load
-    update (Loaded $ merge { page } loadedData) model
+    update nav (Loaded $ merge { page } loadedData) model
   SelectLetter letter ->
     pure
       model
